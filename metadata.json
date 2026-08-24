@@ -1,0 +1,6 @@
+{
+  "name": "Sơn Trà 1 - Hệ Thống Quản Trị",
+  "description": "Hệ thống quản lý nội bộ, quản lý kho, sửa chữa và tài liệu kỹ thuật Nhà máy thủy điện Sơn Trà 1",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
