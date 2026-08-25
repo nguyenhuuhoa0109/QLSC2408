@@ -104,11 +104,24 @@ CREATE TABLE IF NOT EXISTS technical_documents (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
--- BẢNG 6: TÀI KHOẢN NGƯỜI DÙNG & ĐĂNG NHẬP (USERS)
+-- BẢNG 6: TÀI KHOẢN NGƯỜI DÙNG & ĐĂNG NHẬP (BẢNG User / users)
+CREATE TABLE IF NOT EXISTS "User" (
+    id TEXT PRIMARY KEY,
+    email TEXT NOT NULL UNIQUE,
+    "Mat_khau" TEXT,
+    password TEXT,
+    full_name TEXT NOT NULL,
+    role TEXT DEFAULT 'Kỹ sư Vận hành',
+    department TEXT DEFAULT 'Ban Kỹ thuật & Sửa chữa (KTSC)',
+    avatar_color TEXT DEFAULT 'bg-[#d5e3ff] text-[#001b3c]',
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS users (
     id TEXT PRIMARY KEY,
     email TEXT NOT NULL UNIQUE,
-    password TEXT NOT NULL,
+    "Mat_khau" TEXT,
+    password TEXT,
     full_name TEXT NOT NULL,
     role TEXT DEFAULT 'Kỹ sư Vận hành',
     department TEXT DEFAULT 'Ban Kỹ thuật & Sửa chữa (KTSC)',
@@ -122,6 +135,7 @@ ALTER TABLE stock_activities ENABLE ROW LEVEL SECURITY;
 ALTER TABLE approval_tickets ENABLE ROW LEVEL SECURITY;
 ALTER TABLE maintenance_tasks ENABLE ROW LEVEL SECURITY;
 ALTER TABLE technical_documents ENABLE ROW LEVEL SECURITY;
+ALTER TABLE "User" ENABLE ROW LEVEL SECURITY;
 ALTER TABLE users ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "Allow public all inventory" ON inventory_items FOR ALL USING (true) WITH CHECK (true);
@@ -129,15 +143,16 @@ CREATE POLICY "Allow public all activities" ON stock_activities FOR ALL USING (t
 CREATE POLICY "Allow public all approvals" ON approval_tickets FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "Allow public all maintenance" ON maintenance_tasks FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "Allow public all documents" ON technical_documents FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Allow public all users" ON users FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Allow public all User table" ON "User" FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Allow public all users table" ON users FOR ALL USING (true) WITH CHECK (true);
 
 -- Dữ liệu tài khoản mặc định
-INSERT INTO users (id, email, password, full_name, role, department)
+INSERT INTO "User" (id, email, "Mat_khau", password, full_name, role, department)
 VALUES 
-  ('usr-001', 'admin@sontra.vn', 'admin@123', 'Nguyễn Hữu Hòa', 'Quản trị viên', 'Ban Kỹ Thuật & Sửa Chữa (KTSC)'),
-  ('usr-002', 'nguyenhuuhoa0109@gmail.com', '123456', 'Nguyễn Hữu Hòa', 'Kỹ sư trưởng KTSC', 'Ban Kỹ Thuật & Sửa Chữa (KTSC)'),
-  ('usr-003', 'kysu.sontra@gmail.com', 'sontra2023', 'Kỹ Sư Trực Ca H1-H3', 'Kỹ sư Vận hành', 'Đội Vận Hành Sơn Trà 1'),
-  ('usr-004', 'thukho.sontra@gmail.com', 'kho@2023', 'Trần Thị B', 'Thủ kho KTSC', 'Kho Vật Tư Thiết Bị')
+  ('usr-001', 'admin@sontra.vn', 'admin@123', 'admin@123', 'Nguyễn Hữu Hòa', 'Quản trị viên', 'Ban Kỹ Thuật & Sửa Chữa (KTSC)'),
+  ('usr-002', 'nguyenhuuhoa0109@gmail.com', '123456', '123456', 'Nguyễn Hữu Hòa', 'Kỹ sư trưởng KTSC', 'Ban Kỹ Thuật & Sửa Chữa (KTSC)'),
+  ('usr-003', 'kysu.sontra@gmail.com', 'sontra2023', 'sontra2023', 'Kỹ Sư Trực Ca H1-H3', 'Kỹ sư Vận hành', 'Đội Vận Hành Sơn Trà 1'),
+  ('usr-004', 'thukho.sontra@gmail.com', 'kho@2023', 'kho@2023', 'Trần Thị B', 'Thủ kho KTSC', 'Kho Vật Tư Thiết Bị')
 ON CONFLICT (email) DO NOTHING;
 `;
 
@@ -845,44 +860,106 @@ export const SupabaseService = {
     }
 
     try {
-      // 1. Query Supabase table 'users'
-      let queryResult = await supabase
-        .from('users')
-        .select('*')
-        .ilike('email', cleanEmail)
-        .maybeSingle();
+      // 1. Query Supabase table: prioritize 'User', fallback to 'users', 'user', 'Users'
+      const candidateTables = ['User', 'users', 'user', 'Users'];
+      let userData: any = null;
+      let queryError: any = null;
 
-      // Fallback: check table 'User' or 'user' if 'users' not found
-      if (queryResult.error && (queryResult.error.code === '42P01' || queryResult.error.message?.includes('does not exist'))) {
-        queryResult = await supabase
-          .from('user')
-          .select('*')
-          .ilike('email', cleanEmail)
-          .maybeSingle();
+      for (const tbl of candidateTables) {
+        try {
+          // Try exact match with lowercased email or case-insensitive search
+          let res = await supabase
+            .from(tbl)
+            .select('*')
+            .ilike('email', cleanEmail)
+            .maybeSingle();
+
+          // If no error and record found
+          if (!res.error && res.data) {
+            userData = res.data;
+            break;
+          }
+
+          // If error was about column 'email' not existing, try column 'Email'
+          if (res.error && res.error.message?.includes('email')) {
+            const resByCol = await supabase
+              .from(tbl)
+              .select('*')
+              .ilike('Email', cleanEmail)
+              .maybeSingle();
+            if (!resByCol.error && resByCol.data) {
+              userData = resByCol.data;
+              break;
+            }
+          }
+        } catch (e: any) {
+          queryError = e;
+        }
       }
 
-      const userData = queryResult.data;
-
+      // If user row found in Supabase
       if (userData) {
-        const dbPassword = userData.password || userData.mat_khau || userData.pass || userData.MatKhau;
-        if (dbPassword === cleanPassword) {
-          const initials = (userData.full_name || userData.name || userData.email || 'US')
+        // Find password column: prioritize Mat_khau (as specified by user), then mat_khau, MatKhau, password, Password, etc.
+        const dbPassword = 
+          userData['Mat_khau'] !== undefined ? userData['Mat_khau'] :
+          userData['mat_khau'] !== undefined ? userData['mat_khau'] :
+          userData['MatKhau'] !== undefined ? userData['MatKhau'] :
+          userData['matkhau'] !== undefined ? userData['matkhau'] :
+          userData['password'] !== undefined ? userData['password'] :
+          userData['Password'] !== undefined ? userData['Password'] :
+          userData['pass'] !== undefined ? userData['pass'] :
+          userData['Mat_Khau'];
+
+        // Exact comparison with password input
+        const isPasswordCorrect = 
+          dbPassword !== null && 
+          dbPassword !== undefined && 
+          (String(dbPassword) === passwordInput || String(dbPassword).trim() === cleanPassword);
+
+        if (isPasswordCorrect) {
+          const fullName = 
+            userData.full_name || 
+            userData.name || 
+            userData.Ten || 
+            userData.ten || 
+            userData.Ho_ten || 
+            userData.ho_ten || 
+            userData.FullName || 
+            (userData.email || cleanEmail).split('@')[0];
+
+          const initials = fullName
             .split(' ')
             .filter(Boolean)
             .slice(-2)
             .map((w: string) => w[0].toUpperCase())
             .join('') || 'US';
 
+          const userRole = 
+            userData.role || 
+            userData.Chuc_vu || 
+            userData.chuc_vu || 
+            userData.Role || 
+            'Kỹ sư Vận hành';
+
+          const userDepartment = 
+            userData.department || 
+            userData.Phong_ban || 
+            userData.phong_ban || 
+            userData.Department || 
+            'Ban Kỹ Thuật & Sửa Chữa (KTSC)';
+
+          const userEmail = userData.email || userData.Email || cleanEmail;
+
           const authenticatedUser: User = {
             id: userData.id || `usr-${Date.now()}`,
-            name: userData.full_name || userData.name || userData.email.split('@')[0],
-            email: userData.email,
-            username: userData.email.split('@')[0],
-            role: userData.role || 'Kỹ sư Vận hành',
-            roleBadge: (userData.role || 'KỸ SƯ TRỰC CA').toUpperCase(),
+            name: fullName,
+            email: userEmail,
+            username: userEmail.split('@')[0],
+            role: userRole,
+            roleBadge: userRole.toUpperCase(),
             initials: initials,
             avatarUrl: userData.avatar_url || userData.avatar || INITIAL_USER.avatarUrl,
-            department: userData.department || 'Ban Kỹ Thuật & Sửa Chữa (KTSC)',
+            department: userDepartment,
             plant: 'Nhà máy thủy điện Sơn Trà 1'
           };
 
@@ -899,7 +976,7 @@ export const SupabaseService = {
       }
 
       // If user row not found in Supabase table
-      // Check built-in fallback initial users (in case database has not been seeded yet)
+      // Fallback check against initial seeded credentials (if table not created yet)
       const defaultUsers = [
         {
           email: 'admin@sontra.vn',
@@ -936,7 +1013,7 @@ export const SupabaseService = {
       ];
 
       const matchedDefault = defaultUsers.find(
-        u => u.email.toLowerCase() === cleanEmail && u.password === cleanPassword
+        u => u.email.toLowerCase() === cleanEmail && (u.password === passwordInput || u.password === cleanPassword)
       );
 
       if (matchedDefault) {
