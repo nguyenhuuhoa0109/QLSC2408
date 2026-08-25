@@ -9,13 +9,12 @@ interface LoginScreenProps {
 }
 
 export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
-  const [email, setEmail] = useState('nguyenhuuhoa0109@gmail.com');
-  const [password, setPassword] = useState('123456');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
   const [errorMessage, setErrorMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [forgotModalOpen, setForgotModalOpen] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -45,23 +44,6 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
       setErrorMessage('Bạn nhập sai email hoặc mật khẩu');
     } finally {
       setIsLoading(false);
-    }
-  };
-
-  const handleQuickFill = (userType: 'hoa' | 'admin' | 'engineer' | 'manager') => {
-    setErrorMessage('');
-    if (userType === 'hoa') {
-      setEmail('nguyenhuuhoa0109@gmail.com');
-      setPassword('123456');
-    } else if (userType === 'admin') {
-      setEmail('admin@sontra.vn');
-      setPassword('admin@123');
-    } else if (userType === 'engineer') {
-      setEmail('kysu.sontra@gmail.com');
-      setPassword('sontra2023');
-    } else {
-      setEmail('thukho.sontra@gmail.com');
-      setPassword('kho@2023');
     }
   };
 
@@ -96,7 +78,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
 
           <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-[#eef4fc] text-[#004b87] rounded-full text-[11px] font-semibold mt-3.5 border border-[#d6e4f7]">
             <Sparkles size={13} className="text-[#005394]" />
-            <span>Cổng đăng nhập cán bộ kỹ thuật</span>
+            <span>Vui lòng đăng nhập hệ thống</span>
           </div>
         </div>
 
@@ -174,8 +156,8 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
             </div>
           </div>
 
-          {/* Remember me & Forgot Password */}
-          <div className="flex items-center justify-between pt-1 text-xs">
+          {/* Remember me */}
+          <div className="flex items-center justify-start pt-1 text-xs">
             <label className="flex items-center gap-2 cursor-pointer select-none text-[#4a586d] font-medium">
               <input
                 type="checkbox"
@@ -185,15 +167,6 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
               />
               <span>Ghi nhớ đăng nhập</span>
             </label>
-
-            <button
-              type="button"
-              id="login-forgot-password-btn"
-              onClick={() => setForgotModalOpen(true)}
-              className="text-[#005394] hover:text-[#003b6a] font-medium transition-colors hover:underline"
-            >
-              Quên mật khẩu?
-            </button>
           </div>
 
           {/* Submit Button */}
@@ -216,54 +189,6 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
             )}
           </button>
         </form>
-
-        {/* Quick Demo Accounts */}
-        <div className="mt-5 pt-4 border-t border-[#edf2f9]">
-          <p className="text-[10px] font-bold text-[#728399] uppercase tracking-wider mb-2 text-center">
-            Chọn nhanh tài khoản mẫu
-          </p>
-          <div className="grid grid-cols-2 gap-1.5 text-[11px]">
-            <button
-              type="button"
-              onClick={() => handleQuickFill('hoa')}
-              className="py-1.5 px-2 bg-[#f0f4fa] hover:bg-[#dbe9ff] text-[#003d73] rounded-lg font-medium transition-colors text-left truncate flex items-center gap-1 border border-[#e2eaf5]"
-              title="nguyenhuuhoa0109@gmail.com"
-            >
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0"></span>
-              <span className="truncate">Kỹ sư Hòa</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => handleQuickFill('admin')}
-              className="py-1.5 px-2 bg-[#f0f4fa] hover:bg-[#dbe9ff] text-[#003d73] rounded-lg font-medium transition-colors text-left truncate flex items-center gap-1 border border-[#e2eaf5]"
-              title="admin@sontra.vn"
-            >
-              <span className="w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0"></span>
-              <span className="truncate">Quản trị viên</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => handleQuickFill('engineer')}
-              className="py-1.5 px-2 bg-[#f0f4fa] hover:bg-[#dbe9ff] text-[#003d73] rounded-lg font-medium transition-colors text-left truncate flex items-center gap-1 border border-[#e2eaf5]"
-              title="kysu.sontra@gmail.com"
-            >
-              <span className="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0"></span>
-              <span className="truncate">Kỹ sư KTSC</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => handleQuickFill('manager')}
-              className="py-1.5 px-2 bg-[#f0f4fa] hover:bg-[#dbe9ff] text-[#003d73] rounded-lg font-medium transition-colors text-left truncate flex items-center gap-1 border border-[#e2eaf5]"
-              title="thukho.sontra@gmail.com"
-            >
-              <span className="w-1.5 h-1.5 rounded-full bg-purple-500 shrink-0"></span>
-              <span className="truncate">Thủ kho</span>
-            </button>
-          </div>
-        </div>
       </div>
 
       {/* Footer info: Hổ trợ kỹ thuật: 0976645116 */}
@@ -279,29 +204,6 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
           <span>Hổ trợ kỹ thuật: 0976645116</span>
         </a>
       </div>
-
-      {/* Forgot Password Modal */}
-      {forgotModalOpen && (
-        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-sm w-full p-6 shadow-2xl border border-gray-100 animate-in fade-in zoom-in-95">
-            <h3 className="text-base font-bold text-[#002b55] mb-2">Khôi phục mật khẩu</h3>
-            <p className="text-xs text-[#526071] mb-4">
-              Vui lòng liên hệ trực tiếp Ban Kỹ thuật & Sửa chữa (KTSC) hoặc số điện thoại hỗ trợ kỹ thuật để được cấp lại mật khẩu truy cập nội bộ.
-            </p>
-            <div className="bg-[#f0f4fa] p-3 rounded-xl text-xs space-y-1.5 text-[#223b56] mb-5">
-              <p>• <strong>Hỗ trợ kỹ thuật:</strong> <a href="tel:0976645116" className="text-[#005394] font-bold underline">0976645116</a></p>
-              <p>• <strong>Phòng KTSC:</strong> Tầng 2 Nhà Điều hành Sơn Trà 1</p>
-              <p>• <strong>Mã trạm:</strong> ST1-HYDRO-KTSC</p>
-            </div>
-            <button
-              onClick={() => setForgotModalOpen(false)}
-              className="w-full py-2.5 bg-[#005394] hover:bg-[#004278] text-white rounded-xl text-xs font-bold uppercase transition-colors cursor-pointer"
-            >
-              Đã hiểu & Đóng
-            </button>
-          </div>
-        </div>
-      )}
     </div>
   );
 };
