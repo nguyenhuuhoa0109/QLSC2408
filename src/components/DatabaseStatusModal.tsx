@@ -161,7 +161,7 @@ export const DatabaseStatusModal: React.FC<DatabaseStatusModalProps> = ({
               <div className="flex items-center justify-between text-gray-700 font-bold text-[11px] pb-1 border-b border-gray-200">
                 <span className="flex items-center gap-1">
                   <Layers size={13} className="text-[#005394]" />
-                  <span>Chi tiết 5 bảng cơ sở dữ liệu:</span>
+                  <span>Chi tiết các bảng dữ liệu (Users, Kho, Sửa chữa...):</span>
                 </span>
                 <span>Số bản ghi</span>
               </div>

@@ -1,5 +1,6 @@
 import { supabase } from '../lib/supabase';
 import { 
+  User,
   InventoryItem, 
   StockActivity, 
   ApprovalTicket, 
@@ -7,6 +8,7 @@ import {
   TechnicalDocument 
 } from '../types';
 import { 
+  INITIAL_USER,
   INITIAL_INVENTORY, 
   INITIAL_ACTIVITIES, 
   INITIAL_APPROVALS, 
@@ -102,18 +104,41 @@ CREATE TABLE IF NOT EXISTS technical_documents (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
+-- BẢNG 6: TÀI KHOẢN NGƯỜI DÙNG & ĐĂNG NHẬP (USERS)
+CREATE TABLE IF NOT EXISTS users (
+    id TEXT PRIMARY KEY,
+    email TEXT NOT NULL UNIQUE,
+    password TEXT NOT NULL,
+    full_name TEXT NOT NULL,
+    role TEXT DEFAULT 'Kỹ sư Vận hành',
+    department TEXT DEFAULT 'Ban Kỹ thuật & Sửa chữa (KTSC)',
+    avatar_color TEXT DEFAULT 'bg-[#d5e3ff] text-[#001b3c]',
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
 -- Bật Row Level Security (RLS) & cho phép Public Read/Write đối với Demo Client Key
 ALTER TABLE inventory_items ENABLE ROW LEVEL SECURITY;
 ALTER TABLE stock_activities ENABLE ROW LEVEL SECURITY;
 ALTER TABLE approval_tickets ENABLE ROW LEVEL SECURITY;
 ALTER TABLE maintenance_tasks ENABLE ROW LEVEL SECURITY;
 ALTER TABLE technical_documents ENABLE ROW LEVEL SECURITY;
+ALTER TABLE users ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "Allow public all inventory" ON inventory_items FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "Allow public all activities" ON stock_activities FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "Allow public all approvals" ON approval_tickets FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "Allow public all maintenance" ON maintenance_tasks FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "Allow public all documents" ON technical_documents FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Allow public all users" ON users FOR ALL USING (true) WITH CHECK (true);
+
+-- Dữ liệu tài khoản mặc định
+INSERT INTO users (id, email, password, full_name, role, department)
+VALUES 
+  ('usr-001', 'admin@sontra.vn', 'admin@123', 'Nguyễn Hữu Hòa', 'Quản trị viên', 'Ban Kỹ Thuật & Sửa Chữa (KTSC)'),
+  ('usr-002', 'nguyenhuuhoa0109@gmail.com', '123456', 'Nguyễn Hữu Hòa', 'Kỹ sư trưởng KTSC', 'Ban Kỹ Thuật & Sửa Chữa (KTSC)'),
+  ('usr-003', 'kysu.sontra@gmail.com', 'sontra2023', 'Kỹ Sư Trực Ca H1-H3', 'Kỹ sư Vận hành', 'Đội Vận Hành Sơn Trà 1'),
+  ('usr-004', 'thukho.sontra@gmail.com', 'kho@2023', 'Trần Thị B', 'Thủ kho KTSC', 'Kho Vật Tư Thiết Bị')
+ON CONFLICT (email) DO NOTHING;
 `;
 
 export interface TableStatus {
@@ -134,6 +159,7 @@ export const SupabaseService = {
   // Test connection to Supabase and inspect each table
   async checkConnection(): Promise<SupabaseHealth> {
     const tableNames = [
+      'users',
       'inventory_items',
       'stock_activities',
       'approval_tickets',
@@ -745,14 +771,201 @@ export const SupabaseService = {
         };
       }
 
+      // 6. Seed Users
+      const userPayloads = [
+        {
+          id: 'usr-001',
+          email: 'admin@sontra.vn',
+          password: 'admin@123',
+          full_name: 'Nguyễn Hữu Hòa',
+          role: 'Quản trị viên',
+          department: 'Ban Kỹ Thuật & Sửa Chữa (KTSC)',
+          avatar_color: 'bg-[#002b55] text-white'
+        },
+        {
+          id: 'usr-002',
+          email: 'nguyenhuuhoa0109@gmail.com',
+          password: '123456',
+          full_name: 'Nguyễn Hữu Hòa',
+          role: 'Kỹ sư trưởng KTSC',
+          department: 'Ban Kỹ Thuật & Sửa Chữa (KTSC)',
+          avatar_color: 'bg-[#005394] text-white'
+        },
+        {
+          id: 'usr-003',
+          email: 'kysu.sontra@gmail.com',
+          password: 'sontra2023',
+          full_name: 'Kỹ Sư Trực Ca H1-H3',
+          role: 'Kỹ sư Vận hành',
+          department: 'Đội Vận Hành Sơn Trà 1',
+          avatar_color: 'bg-[#d5e3ff] text-[#001b3c]'
+        },
+        {
+          id: 'usr-004',
+          email: 'thukho.sontra@gmail.com',
+          password: 'kho@2023',
+          full_name: 'Trần Thị B',
+          role: 'Thủ kho KTSC',
+          department: 'Kho Vật Tư Thiết Bị',
+          avatar_color: 'bg-[#e2eaf5] text-[#005394]'
+        }
+      ];
+      try {
+        await supabase.from('users').upsert(userPayloads);
+      } catch (errUser) {
+        console.warn('Bảng users chưa khởi tạo hoặc lỗi nạp:', errUser);
+      }
+
       return {
         success: true,
-        message: 'Đã nạp toàn bộ danh mục vật tư & dữ liệu khởi tạo lên Supabase thành công!'
+        message: 'Đã nạp toàn bộ danh mục vật tư, tài liệu & tài khoản người dùng lên Supabase thành công!'
       };
     } catch (e: any) {
       return {
         success: false,
         message: e?.message || 'Có lỗi khi đồng bộ dữ liệu ban đầu lên Supabase'
+      };
+    }
+  },
+
+  // 6. USER AUTHENTICATION & LOGIN
+  async authenticateUser(emailInput: string, passwordInput: string): Promise<{
+    success: boolean;
+    user?: User;
+    message?: string;
+  }> {
+    const cleanEmail = emailInput.trim().toLowerCase();
+    const cleanPassword = passwordInput.trim();
+
+    if (!cleanEmail || !cleanPassword) {
+      return {
+        success: false,
+        message: 'Bạn nhập sai email hoặc mật khẩu'
+      };
+    }
+
+    try {
+      // 1. Query Supabase table 'users'
+      let queryResult = await supabase
+        .from('users')
+        .select('*')
+        .ilike('email', cleanEmail)
+        .maybeSingle();
+
+      // Fallback: check table 'User' or 'user' if 'users' not found
+      if (queryResult.error && (queryResult.error.code === '42P01' || queryResult.error.message?.includes('does not exist'))) {
+        queryResult = await supabase
+          .from('user')
+          .select('*')
+          .ilike('email', cleanEmail)
+          .maybeSingle();
+      }
+
+      const userData = queryResult.data;
+
+      if (userData) {
+        const dbPassword = userData.password || userData.mat_khau || userData.pass || userData.MatKhau;
+        if (dbPassword === cleanPassword) {
+          const initials = (userData.full_name || userData.name || userData.email || 'US')
+            .split(' ')
+            .filter(Boolean)
+            .slice(-2)
+            .map((w: string) => w[0].toUpperCase())
+            .join('') || 'US';
+
+          const authenticatedUser: User = {
+            id: userData.id || `usr-${Date.now()}`,
+            name: userData.full_name || userData.name || userData.email.split('@')[0],
+            email: userData.email,
+            username: userData.email.split('@')[0],
+            role: userData.role || 'Kỹ sư Vận hành',
+            roleBadge: (userData.role || 'KỸ SƯ TRỰC CA').toUpperCase(),
+            initials: initials,
+            avatarUrl: userData.avatar_url || userData.avatar || INITIAL_USER.avatarUrl,
+            department: userData.department || 'Ban Kỹ Thuật & Sửa Chữa (KTSC)',
+            plant: 'Nhà máy thủy điện Sơn Trà 1'
+          };
+
+          return {
+            success: true,
+            user: authenticatedUser
+          };
+        } else {
+          return {
+            success: false,
+            message: 'Bạn nhập sai email hoặc mật khẩu'
+          };
+        }
+      }
+
+      // If user row not found in Supabase table
+      // Check built-in fallback initial users (in case database has not been seeded yet)
+      const defaultUsers = [
+        {
+          email: 'admin@sontra.vn',
+          password: 'admin@123',
+          name: 'Nguyễn Hữu Hòa',
+          role: 'Quản trị viên',
+          roleBadge: 'QUẢN TRỊ VIÊN',
+          department: 'Ban Kỹ Thuật & Sửa Chữa (KTSC)'
+        },
+        {
+          email: 'nguyenhuuhoa0109@gmail.com',
+          password: '123456',
+          name: 'Nguyễn Hữu Hòa',
+          role: 'Kỹ sư trưởng KTSC',
+          roleBadge: 'KỸ SƯ TRƯỞNG',
+          department: 'Ban Kỹ Thuật & Sửa Chữa (KTSC)'
+        },
+        {
+          email: 'kysu.sontra@gmail.com',
+          password: 'sontra2023',
+          name: 'Kỹ Sư Trực Ca H1-H3',
+          role: 'Kỹ sư Vận hành',
+          roleBadge: 'KỸ SƯ TRỰC CA',
+          department: 'Đội Vận Hành Sơn Trà 1'
+        },
+        {
+          email: 'thukho.sontra@gmail.com',
+          password: 'kho@2023',
+          name: 'Trần Thị B',
+          role: 'Thủ kho KTSC',
+          roleBadge: 'THỦ KHO KỸ THUẬT',
+          department: 'Kho Vật Tư Thiết Bị'
+        }
+      ];
+
+      const matchedDefault = defaultUsers.find(
+        u => u.email.toLowerCase() === cleanEmail && u.password === cleanPassword
+      );
+
+      if (matchedDefault) {
+        return {
+          success: true,
+          user: {
+            id: `usr-${cleanEmail.replace(/[^a-zA-Z0-9]/g, '')}`,
+            name: matchedDefault.name,
+            email: matchedDefault.email,
+            username: matchedDefault.email.split('@')[0],
+            role: matchedDefault.role,
+            roleBadge: matchedDefault.roleBadge,
+            initials: matchedDefault.name.split(' ').slice(-2).map(w => w[0].toUpperCase()).join(''),
+            avatarUrl: INITIAL_USER.avatarUrl,
+            department: matchedDefault.department,
+            plant: 'Nhà máy thủy điện Sơn Trà 1'
+          }
+        };
+      }
+
+      return {
+        success: false,
+        message: 'Bạn nhập sai email hoặc mật khẩu'
+      };
+    } catch (err) {
+      console.error('Lỗi xác thực người dùng:', err);
+      return {
+        success: false,
+        message: 'Bạn nhập sai email hoặc mật khẩu'
       };
     }
   }

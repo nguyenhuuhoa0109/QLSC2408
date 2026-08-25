@@ -8,6 +8,7 @@ import {
   INITIAL_DOCUMENTS 
 } from './mockData';
 import { 
+  User,
   NavigationTab, 
   PlantLocation, 
   StockActivity, 
@@ -128,13 +129,17 @@ export default function App() {
   const unreadNotificationsCount = pendingApprovalsCount > 0 ? pendingApprovalsCount + 1 : 1;
 
   // Handlers
-  const handleLogin = (username: string) => {
-    setUser({
-      ...INITIAL_USER,
-      name: username.includes('ky') ? 'Nguyễn Văn A' : username.includes('kho') ? 'Trần Thị B' : 'Admin User',
-      role: username.includes('ky') ? 'Kỹ sư Vận hành' : username.includes('kho') ? 'Thủ kho KTSC' : 'Quản trị viên',
-      roleBadge: username.includes('ky') ? 'KỸ SƯ TRỰC CA' : username.includes('kho') ? 'THỦ KHO KỸ THUẬT' : 'QUẢN TRỊ VIÊN'
-    });
+  const handleLogin = (userPayload: User | string) => {
+    if (typeof userPayload === 'string') {
+      setUser({
+        ...INITIAL_USER,
+        name: userPayload.includes('ky') ? 'Nguyễn Văn A' : userPayload.includes('kho') ? 'Trần Thị B' : 'Admin User',
+        role: userPayload.includes('ky') ? 'Kỹ sư Vận hành' : userPayload.includes('kho') ? 'Thủ kho KTSC' : 'Quản trị viên',
+        roleBadge: userPayload.includes('ky') ? 'KỸ SƯ TRỰC CA' : userPayload.includes('kho') ? 'THỦ KHO KỸ THUẬT' : 'QUẢN TRỊ VIÊN'
+      });
+    } else {
+      setUser(userPayload);
+    }
     setIsLoggedIn(true);
   };
 
