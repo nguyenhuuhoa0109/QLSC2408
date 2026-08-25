@@ -99,3 +99,25 @@ export interface TechnicalDocument {
 export type NavigationTab = 'tong-quan' | 'quan-ly-kho' | 'quan-ly-sua-chua' | 'quan-ly-tai-lieu' | 'bao-cao';
 
 export type PlantLocation = 'Nhà máy thủy điện Sơn Trà 1' | 'Hòa Bình Plant';
+
+export type ActivityDomain = 'warehouse' | 'maintenance' | 'document';
+
+export interface UnifiedActivity {
+  id: string;
+  domain: ActivityDomain;
+  time: string;
+  action: string;
+  title: string;
+  subTitle?: string;
+  code?: string;
+  user: {
+    name: string;
+    initials: string;
+    avatarColor: string;
+    role?: string;
+  };
+  status: string;
+  statusType?: 'success' | 'warning' | 'info' | 'danger';
+  details?: string;
+  meta?: any;
+}

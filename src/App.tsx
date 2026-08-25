@@ -14,7 +14,8 @@ import {
   InventoryItem, 
   ApprovalTicket, 
   MaintenanceTask, 
-  TechnicalDocument 
+  TechnicalDocument,
+  UnifiedActivity 
 } from './types';
 import { LoginScreen } from './components/LoginScreen';
 import { Header } from './components/Header';
@@ -59,7 +60,7 @@ export default function App() {
     isOpen: false,
     type: 'import'
   });
-  const [selectedActivityForDetail, setSelectedActivityForDetail] = useState<StockActivity | null>(null);
+  const [selectedActivityForDetail, setSelectedActivityForDetail] = useState<StockActivity | UnifiedActivity | null>(null);
 
   // Load live data from Supabase
   const loadDataFromSupabase = async () => {
@@ -265,11 +266,15 @@ export default function App() {
             plantName={currentPlant}
             activities={activities}
             inventory={inventory}
+            maintenanceTasks={maintenanceTasks}
+            documents={documents}
             pendingApprovalsCount={pendingApprovalsCount}
             onOpenApprovals={() => setShowApprovalModal(true)}
             onOpenNewTransaction={(type, item) => setTransactionModalConfig({ isOpen: true, type, preselectedItem: item })}
             onSelectActivity={(act) => setSelectedActivityForDetail(act)}
             onNavigateToWarehouse={() => setCurrentTab('quan-ly-kho')}
+            onNavigateToMaintenance={() => setCurrentTab('quan-ly-sua-chua')}
+            onNavigateToDocuments={() => setCurrentTab('quan-ly-tai-lieu')}
             isMobileLayout={isMobilePreview}
           />
         );
@@ -427,6 +432,9 @@ export default function App() {
           activity={selectedActivityForDetail}
           plantName={currentPlant}
           onClose={() => setSelectedActivityForDetail(null)}
+          onNavigateTab={(tab) => {
+            setCurrentTab(tab);
+          }}
         />
       )}
 
