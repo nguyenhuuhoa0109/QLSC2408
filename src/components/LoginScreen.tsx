@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { Mail, Lock, Eye, EyeOff, ArrowRight, Phone, AlertCircle, Sparkles } from 'lucide-react';
+import { Mail, Lock, Eye, EyeOff, ArrowRight, Phone, AlertCircle, Sparkles, Database } from 'lucide-react';
 import { DatPhuongLogo } from './DatPhuongLogo';
 import { SupabaseService } from '../services/supabaseService';
+import { DatabaseStatusModal } from './DatabaseStatusModal';
 import { User } from '../types';
 
 interface LoginScreenProps {
@@ -15,6 +16,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
   const [rememberMe, setRememberMe] = useState(true);
   const [errorMessage, setErrorMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [showDbModal, setShowDbModal] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -58,8 +60,18 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
         }}
       />
 
-      {/* Top Spacer */}
-      <div className="w-full max-w-md hidden sm:block" />
+      {/* Top Spacer & DB Status */}
+      <div className="w-full max-w-md flex justify-end z-10">
+        <button
+          type="button"
+          onClick={() => setShowDbModal(true)}
+          className="inline-flex items-center gap-1.5 px-2.5 py-1 text-[11px] text-gray-500 hover:text-[#005394] bg-white/70 hover:bg-white border border-gray-200/80 rounded-lg shadow-2xs transition-all cursor-pointer"
+          title="Kiểm tra kết nối Supabase & bảng dữ liệu"
+        >
+          <Database size={13} className="text-[#005394]" />
+          <span>Kiểm tra CSDL</span>
+        </button>
+      </div>
 
       {/* Main Login Card */}
       <div className="w-full max-w-[430px] bg-white rounded-2xl sm:rounded-3xl shadow-[0_10px_35px_rgba(0,40,90,0.06)] border border-[#e2eaf5] p-7 sm:p-9 z-10 flex flex-col relative transition-all duration-300 my-auto">
@@ -204,6 +216,11 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
           <span>Hổ trợ kỹ thuật: 0976645116</span>
         </a>
       </div>
+      {/* Database Diagnostics Modal */}
+      <DatabaseStatusModal 
+        isOpen={showDbModal} 
+        onClose={() => setShowDbModal(false)} 
+      />
     </div>
   );
 };
