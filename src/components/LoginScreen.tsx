@@ -3,7 +3,7 @@ import { Mail, Lock, Eye, EyeOff, ArrowRight, Phone, AlertCircle, Shield } from 
 import { DatPhuongLogo } from './DatPhuongLogo';
 import { SupabaseService } from '../services/supabaseService';
 import { User } from '../types';
-import sontraImage from '../assets/images/sontra_goc_100_1787728984244.jpg';
+import sontraImage from '../assets/images/sontra_dam_goc_1787730223380.jpg';
 
 interface LoginScreenProps {
   onLogin: (user: User | string) => void;
