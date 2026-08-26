@@ -1,4 +1,4 @@
-import { supabase } from '../lib/supabase';
+import { supabase, SUPABASE_URL, SUPABASE_ANON_KEY } from '../lib/supabase';
 import { 
   User,
   InventoryItem, 
@@ -861,184 +861,145 @@ export const SupabaseService = {
       };
     }
 
-    console.log('[Supabase Auth] Đang kiểm tra đăng nhập cho email:', cleanEmail);
+    console.log('[Supabase Auth] Xác thực tài khoản cho email:', cleanEmail);
 
     try {
-      // Danh sách các tên bảng ưu tiên (đặc biệt là 'User' và 'users')
-      const candidateTables = [
-        'User', 
-        'users', 
-        'user', 
-        'Users', 
-        'USER', 
-        'USERS', 
-        'tai_khoan', 
-        'taikhoan', 
-        'TaiKhoan', 
-        'Tai_Khoan', 
-        'nguoidung', 
-        'nguoi_dung', 
-        'NguoiDung', 
-        'account', 
-        'accounts'
-      ];
-
-      let matchedRow: any = null;
-      let matchingTableName = '';
-
-      // Helper function to check if a row matches the given email
-      const isRowEmailMatch = (row: any): boolean => {
-        if (!row || typeof row !== 'object') return false;
-        for (const [key, val] of Object.entries(row)) {
-          if (val !== undefined && val !== null) {
-            const str = String(val).trim().toLowerCase();
-            if (str === cleanEmail) {
-              return true;
-            }
-          }
-        }
-        return false;
+      // 1. Quét song song siêu tốc tới bảng 'User' với các cột ID, Email, Mat_khau, Ho_ten, Chuc_vu, Phong_ban
+      const headers = {
+        'apikey': SUPABASE_ANON_KEY,
+        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+        'Content-Type': 'application/json'
       };
 
-      // Strategy 1: Scan table records with select('*')
-      for (const tbl of candidateTables) {
-        try {
-          const { data, error } = await supabase.from(tbl).select('*');
-          if (!error && Array.isArray(data) && data.length > 0) {
-            console.log(`[Supabase Auth] Bảng '${tbl}' có ${data.length} bản ghi`);
-            for (const row of data) {
-              if (isRowEmailMatch(row)) {
-                matchedRow = row;
-                matchingTableName = tbl;
-                console.log(`[Supabase Auth] Tìm thấy user trong bảng '${tbl}':`, row);
-                break;
-              }
-            }
-            if (matchedRow) break;
-          } else if (error) {
-            console.log(`[Supabase Auth] Truy vấn bảng '${tbl}' thất bại hoặc không tồn tại:`, error.message);
-          }
-        } catch (errTbl) {
-          // Bỏ qua lỗi bảng không tồn tại
-        }
-      }
+      const fetchWithTimeout = (url: string, ms = 3000) => {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), ms);
+        return fetch(url, { headers, signal: controller.signal })
+          .then(res => res.ok ? res.json() : null)
+          .catch(() => null)
+          .finally(() => clearTimeout(timeoutId));
+      };
 
-      // Strategy 2: Targeted filter queries nếu chưa tìm thấy bằng select('*')
-      if (!matchedRow) {
-        for (const tbl of candidateTables) {
-          const emailCols = ['email', 'Email', 'Emai', 'emai', 'EMAIL', 'tai_khoan', 'username', 'user_email', 'mail'];
-          for (const col of emailCols) {
-            try {
-              const res = await supabase.from(tbl).select('*').ilike(col, cleanEmail).maybeSingle();
-              if (!res.error && res.data) {
-                matchedRow = res.data;
-                matchingTableName = tbl;
-                console.log(`[Supabase Auth] Tìm thấy user qua bộ lọc '${tbl}.${col}':`, res.data);
-                break;
-              }
-            } catch {
-              // Tiếp tục thử cột khác
-            }
-          }
-          if (matchedRow) break;
-        }
-      }
+      const restEndpoints = [
+        `${SUPABASE_URL}/rest/v1/User?select=ID,Email,Mat_khau,Ho_ten,Chuc_vu,Phong_ban`,
+        `${SUPABASE_URL}/rest/v1/User?select=*`,
+        `${SUPABASE_URL}/rest/v1/User?Email=ilike.${encodeURIComponent(cleanEmail)}`,
+        `${SUPABASE_URL}/rest/v1/User?Email=eq.${encodeURIComponent(rawEmail)}`
+      ];
 
-      // Strategy 3: Thử tìm theo exact match
-      if (!matchedRow) {
-        for (const tbl of candidateTables) {
+      const sdkQueries = [
+        (async () => {
           try {
-            const res = await supabase.from(tbl).select('*').eq('email', rawEmail).maybeSingle();
-            if (!res.error && res.data) {
-              matchedRow = res.data;
-              matchingTableName = tbl;
-              break;
-            }
+            const { data } = await supabase.from('User').select('ID, Email, Mat_khau, Ho_ten, Chuc_vu, Phong_ban');
+            return data;
           } catch {
-            // Tiếp tục
+            return null;
+          }
+        })(),
+        (async () => {
+          try {
+            const { data } = await supabase.from('User').select('*');
+            return data;
+          } catch {
+            return null;
+          }
+        })(),
+        (async () => {
+          try {
+            const { data } = await supabase.from('User').select('*').ilike('Email', cleanEmail);
+            return data;
+          } catch {
+            return null;
+          }
+        })()
+      ];
+
+      const parallelQueries = [
+        ...restEndpoints.map(url => fetchWithTimeout(url)),
+        ...sdkQueries
+      ];
+
+      const queryResults = await Promise.allSettled(parallelQueries);
+
+      // Thu thập tất cả các dòng dữ liệu nhận được từ Supabase
+      const allRows: any[] = [];
+      for (const res of queryResults) {
+        if (res.status === 'fulfilled' && res.value) {
+          if (Array.isArray(res.value)) {
+            allRows.push(...res.value);
+          } else if (typeof res.value === 'object') {
+            allRows.push(res.value);
           }
         }
       }
 
-      // Nếu tìm thấy tài khoản trong bảng CSDL Supabase
-      if (matchedRow) {
-        console.log(`[Supabase Auth] Đang kiểm tra mật khẩu cho bản ghi tại bảng '${matchingTableName}'`);
+      console.log(`[Supabase Auth] Tổng số bản ghi nhận được từ bảng User: ${allRows.length}`);
 
-        // Danh sách các tên cột mật khẩu ưu tiên (theo thứ tự: Mat_khau -> mat_khau -> MatKhau -> password...)
-        const possiblePasswordValues: (string | number | undefined)[] = [
-          matchedRow['Mat_khau'],
-          matchedRow['mat_khau'],
-          matchedRow['MatKhau'],
-          matchedRow['matkhau'],
-          matchedRow['Mat_Khau'],
-          matchedRow['mat_Khau'],
-          matchedRow['MAT_KHAU'],
-          matchedRow['password'],
-          matchedRow['Password'],
-          matchedRow['PASSWORD'],
-          matchedRow['pass'],
-          matchedRow['Pass'],
-          matchedRow['mk'],
-          matchedRow['MK'],
-          matchedRow['pwd'],
-          matchedRow['secret']
-        ];
+      // Nếu bảng User trả về 0 bản ghi (do RLS chưa tắt hoặc chưa mở quyền Policy cho anon)
+      if (allRows.length === 0) {
+        console.warn('[Supabase Auth] Không đọc được bản ghi nào từ bảng User. Nguyên nhân: Bảng "User" trên Supabase đang bật Row Level Security (RLS) nhưng chưa có Policy cho phép anon đọc.');
+        return {
+          success: false,
+          message: 'Không thể tải dữ liệu tài khoản từ Supabase (Bảng "User" đang bị chặn bởi RLS. Vui lòng mở khóa quyền SELECT cho bảng User trong Supabase SQL Editor).'
+        };
+      }
+
+      // Tìm dòng dữ liệu có Email trùng khớp
+      let matchedRow: any = null;
+      for (const row of allRows) {
+        if (!row || typeof row !== 'object') continue;
+
+        const rowEmail = row.Email || row.email || row.EMAIL || row.Emai || row.emai;
+
+        if (rowEmail && String(rowEmail).trim().toLowerCase() === cleanEmail) {
+          matchedRow = row;
+          break;
+        }
+
+        for (const val of Object.values(row)) {
+          if (val && typeof val === 'string' && val.trim().toLowerCase() === cleanEmail) {
+            matchedRow = row;
+            break;
+          }
+        }
+        if (matchedRow) break;
+      }
+
+      // Nếu tìm thấy bản ghi người dùng trong CSDL Supabase
+      if (matchedRow) {
+        console.log('[Supabase Auth] Đã tìm thấy user trong CSDL:', matchedRow);
+
+        // Lấy giá trị mật khẩu từ cột Mat_khau
+        const dbPassword = 
+          matchedRow['Mat_khau'] !== undefined ? matchedRow['Mat_khau'] :
+          matchedRow['mat_khau'] !== undefined ? matchedRow['mat_khau'] :
+          matchedRow['MatKhau'] !== undefined ? matchedRow['MatKhau'] :
+          matchedRow['password'] !== undefined ? matchedRow['password'] :
+          matchedRow['Password'];
 
         let passwordMatches = false;
 
-        for (const passVal of possiblePasswordValues) {
-          if (passVal !== undefined && passVal !== null) {
-            const passStr = String(passVal);
-            if (
-              passStr === rawPassword || 
-              passStr.trim() === cleanPassword ||
-              passStr === cleanPassword
-            ) {
-              passwordMatches = true;
-              break;
-            }
-          }
-        }
-
-        // Quét thêm tất cả các key nếu chưa khớp (phòng khi cột tên là mat_khau_1, mật_khẩu, etc.)
-        if (!passwordMatches) {
-          for (const [k, v] of Object.entries(matchedRow)) {
-            if (v !== undefined && v !== null) {
-              const kLower = k.toLowerCase();
-              if (
-                kLower.includes('mat') || 
-                kLower.includes('khau') || 
-                kLower.includes('pass') || 
-                kLower.includes('pwd') ||
-                kLower.includes('mk')
-              ) {
-                const valStr = String(v);
-                if (
-                  valStr === rawPassword || 
-                  valStr.trim() === cleanPassword || 
-                  valStr === cleanPassword
-                ) {
-                  passwordMatches = true;
-                  break;
-                }
-              }
-            }
+        if (dbPassword !== undefined && dbPassword !== null) {
+          const passStr = String(dbPassword);
+          if (
+            passStr === rawPassword || 
+            passStr.trim() === cleanPassword || 
+            passStr === cleanPassword
+          ) {
+            passwordMatches = true;
           }
         }
 
         if (passwordMatches) {
-          console.log('[Supabase Auth] Mật khẩu chính xác! Cho phép đăng nhập.');
+          console.log('[Supabase Auth] Mật khẩu cột Mat_khau chính xác! Cho phép đăng nhập.');
 
           const fullName = 
+            matchedRow.Ho_ten || 
+            matchedRow.ho_ten || 
             matchedRow.full_name || 
             matchedRow.name || 
             matchedRow.Ten || 
-            matchedRow.ten || 
-            matchedRow.Ho_ten || 
-            matchedRow.ho_ten || 
-            matchedRow.FullName || 
-            matchedRow.ho_va_ten || 
-            (matchedRow.email || cleanEmail).split('@')[0];
+            (matchedRow.Email || cleanEmail).split('@')[0];
 
           const initials = String(fullName)
             .split(' ')
@@ -1048,32 +1009,30 @@ export const SupabaseService = {
             .join('') || 'ST';
 
           const userRole = 
-            matchedRow.role || 
             matchedRow.Chuc_vu || 
             matchedRow.chuc_vu || 
+            matchedRow.role || 
             matchedRow.Role || 
-            matchedRow.chuc_danh || 
             'Kỹ sư Vận hành';
 
           const userDepartment = 
-            matchedRow.department || 
             matchedRow.Phong_ban || 
             matchedRow.phong_ban || 
+            matchedRow.department || 
             matchedRow.Department || 
-            matchedRow.bo_phan || 
             'Ban Kỹ Thuật & Sửa Chữa (KTSC)';
 
-          const userEmail = matchedRow.email || matchedRow.Email || cleanEmail;
+          const userEmail = matchedRow.Email || matchedRow.email || cleanEmail;
 
           const authenticatedUser: User = {
-            id: matchedRow.id ? String(matchedRow.id) : `usr-${Date.now()}`,
+            id: matchedRow.ID ? String(matchedRow.ID) : matchedRow.id ? String(matchedRow.id) : `usr-${Date.now()}`,
             name: fullName,
             email: userEmail,
             username: String(userEmail).split('@')[0],
             role: userRole,
             roleBadge: String(userRole).toUpperCase(),
             initials: initials,
-            avatarUrl: matchedRow.avatar_url || matchedRow.avatar || INITIAL_USER.avatarUrl,
+            avatarUrl: INITIAL_USER.avatarUrl,
             department: userDepartment,
             plant: 'Nhà máy thủy điện Sơn Trà 1'
           };
@@ -1083,7 +1042,7 @@ export const SupabaseService = {
             user: authenticatedUser
           };
         } else {
-          console.warn('[Supabase Auth] Mật khẩu không trùng khớp với giá trị trong cột Mat_khau của bản ghi');
+          console.warn('[Supabase Auth] Mật khẩu không trùng khớp với giá trị trong cột Mat_khau');
           return {
             success: false,
             message: 'Bạn nhập sai email hoặc mật khẩu'
@@ -1091,96 +1050,6 @@ export const SupabaseService = {
         }
       }
 
-      // Strategy 4: Supabase Built-in Auth API
-      try {
-        const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
-          email: cleanEmail,
-          password: rawPassword
-        });
-
-        if (!authError && authData.user) {
-          const u = authData.user;
-          const name = u.user_metadata?.full_name || u.user_metadata?.name || u.email?.split('@')[0] || 'Kỹ sư Sơn Trà';
-          const initials = name.split(' ').slice(-2).map((w: string) => w[0].toUpperCase()).join('') || 'ST';
-          return {
-            success: true,
-            user: {
-              id: u.id,
-              name: name,
-              email: u.email,
-              username: u.email?.split('@')[0] || 'user',
-              role: u.user_metadata?.role || 'Kỹ sư Vận hành',
-              roleBadge: (u.user_metadata?.role || 'KỸ SƯ TRỰC CA').toUpperCase(),
-              initials: initials,
-              avatarUrl: INITIAL_USER.avatarUrl,
-              department: u.user_metadata?.department || 'Ban Kỹ Thuật & Sửa Chữa (KTSC)',
-              plant: 'Nhà máy thủy điện Sơn Trà 1'
-            }
-          };
-        }
-      } catch {
-        // Supabase Auth not used
-      }
-
-      // Strategy 5: Fallback các tài khoản ban đầu nếu bảng CSDL chưa được khởi tạo
-      const defaultUsers = [
-        {
-          email: 'admin@sontra.vn',
-          password: 'admin@123',
-          name: 'Nguyễn Hữu Hòa',
-          role: 'Quản trị viên',
-          roleBadge: 'QUẢN TRỊ VIÊN',
-          department: 'Ban Kỹ Thuật & Sửa Chữa (KTSC)'
-        },
-        {
-          email: 'nguyenhuuhoa0109@gmail.com',
-          password: '123456',
-          name: 'Nguyễn Hữu Hòa',
-          role: 'Kỹ sư trưởng KTSC',
-          roleBadge: 'KỸ SƯ TRƯỞNG',
-          department: 'Ban Kỹ Thuật & Sửa Chữa (KTSC)'
-        },
-        {
-          email: 'kysu.sontra@gmail.com',
-          password: 'sontra2023',
-          name: 'Kỹ Sư Trực Ca H1-H3',
-          role: 'Kỹ sư Vận hành',
-          roleBadge: 'KỸ SƯ TRỰC CA',
-          department: 'Đội Vận Hành Sơn Trà 1'
-        },
-        {
-          email: 'thukho.sontra@gmail.com',
-          password: 'kho@2023',
-          name: 'Trần Thị B',
-          role: 'Thủ kho KTSC',
-          roleBadge: 'THỦ KHO KỸ THUẬT',
-          department: 'Kho Vật Tư Thiết Bị'
-        }
-      ];
-
-      const matchedDefault = defaultUsers.find(
-        u => u.email.toLowerCase() === cleanEmail && (u.password === rawPassword || u.password === cleanPassword)
-      );
-
-      if (matchedDefault) {
-        return {
-          success: true,
-          user: {
-            id: `usr-${cleanEmail.replace(/[^a-zA-Z0-9]/g, '')}`,
-            name: matchedDefault.name,
-            email: matchedDefault.email,
-            username: matchedDefault.email.split('@')[0],
-            role: matchedDefault.role,
-            roleBadge: matchedDefault.roleBadge,
-            initials: matchedDefault.name.split(' ').slice(-2).map(w => w[0].toUpperCase()).join(''),
-            avatarUrl: INITIAL_USER.avatarUrl,
-            department: matchedDefault.department,
-            plant: 'Nhà máy thủy điện Sơn Trà 1'
-          }
-        };
-      }
-
-      console.warn('[Supabase Auth] Không tìm thấy email trong hệ thống:', cleanEmail);
       return {
         success: false,
         message: 'Bạn nhập sai email hoặc mật khẩu'
@@ -1194,3 +1063,4 @@ export const SupabaseService = {
     }
   }
 };
+
