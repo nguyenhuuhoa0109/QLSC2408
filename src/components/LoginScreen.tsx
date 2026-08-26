@@ -91,7 +91,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
         <img
           src={sontraImage}
           alt="Nhà máy Thủy điện Sơn Trà 1"
-          className="w-full h-full object-cover object-center"
+          className="w-full h-full object-cover object-right"
           referrerPolicy="no-referrer"
         />
       </div>
