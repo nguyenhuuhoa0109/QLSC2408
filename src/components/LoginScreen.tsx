@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Mail, Lock, Eye, EyeOff, ArrowRight, Phone, AlertCircle, Sparkles, Shield, Package, Wrench, FileText } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Mail, Lock, Eye, EyeOff, ArrowRight, Phone, AlertCircle, Shield } from 'lucide-react';
 import { DatPhuongLogo } from './DatPhuongLogo';
 import { SupabaseService } from '../services/supabaseService';
 import { User } from '../types';
@@ -9,13 +9,37 @@ interface LoginScreenProps {
   onLogin: (user: User | string) => void;
 }
 
+const STORAGE_EMAIL_KEY = 'sontra_saved_email';
+const STORAGE_PASSWORD_KEY = 'sontra_saved_password';
+const STORAGE_REMEMBER_KEY = 'sontra_remember_me';
+
 export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  // Load saved credentials from localStorage if remembered
+  const [email, setEmail] = useState(() => {
+    return localStorage.getItem(STORAGE_EMAIL_KEY) || 'nguyenhuuhoa0109@gmail.com';
+  });
+  const [password, setPassword] = useState(() => {
+    return localStorage.getItem(STORAGE_PASSWORD_KEY) || '';
+  });
   const [showPassword, setShowPassword] = useState(false);
-  const [rememberMe, setRememberMe] = useState(true);
+  const [rememberMe, setRememberMe] = useState(() => {
+    const saved = localStorage.getItem(STORAGE_REMEMBER_KEY);
+    return saved !== null ? saved === 'true' : true;
+  });
   const [errorMessage, setErrorMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+
+  // Sync initial state if localStorage has credentials
+  useEffect(() => {
+    const savedRemember = localStorage.getItem(STORAGE_REMEMBER_KEY);
+    if (savedRemember === 'true') {
+      const savedEmail = localStorage.getItem(STORAGE_EMAIL_KEY);
+      const savedPass = localStorage.getItem(STORAGE_PASSWORD_KEY);
+      if (savedEmail) setEmail(savedEmail);
+      if (savedPass) setPassword(savedPass);
+      setRememberMe(true);
+    }
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -37,6 +61,17 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
       const authResult = await SupabaseService.authenticateUser(email, password);
 
       if (authResult.success && authResult.user) {
+        // Save or clear credentials in localStorage based on Remember Me
+        if (rememberMe) {
+          localStorage.setItem(STORAGE_EMAIL_KEY, email.trim());
+          localStorage.setItem(STORAGE_PASSWORD_KEY, password);
+          localStorage.setItem(STORAGE_REMEMBER_KEY, 'true');
+        } else {
+          localStorage.removeItem(STORAGE_EMAIL_KEY);
+          localStorage.removeItem(STORAGE_PASSWORD_KEY);
+          localStorage.setItem(STORAGE_REMEMBER_KEY, 'false');
+        }
+
         onLogin(authResult.user);
       } else {
         setErrorMessage(authResult.message || 'Bạn nhập sai email hoặc mật khẩu');
@@ -51,105 +86,29 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
   return (
     <div className="min-h-screen w-full bg-[#f4f7fb] flex flex-col lg:grid lg:grid-cols-3 overflow-hidden">
       
-      {/* LEFT 2 COLUMNS (2/3 width on desktop): Sơn Trà 1 Hydropower Dam Image & Branding */}
-      <div className="hidden lg:flex lg:col-span-2 relative bg-[#001c38] text-white flex-col justify-between p-10 xl:p-14 overflow-hidden select-none">
-        {/* Background Image: SƠn trà */}
-        <div className="absolute inset-0 z-0">
-          <img
-            src={sontraImage}
-            alt="Nhà máy Thủy điện Sơn Trà 1"
-            className="w-full h-full object-cover object-center transform scale-105 hover:scale-100 transition-transform duration-1000 ease-out"
-            referrerPolicy="no-referrer"
-          />
-          {/* High quality gradient overlay for contrast and legibility */}
-          <div className="absolute inset-0 bg-gradient-to-t from-[#001830]/95 via-[#002448]/45 to-[#001830]/60" />
-          <div className="absolute inset-0 bg-radial from-transparent via-[#001c38]/30 to-[#001428]/80" />
-        </div>
-
-        {/* Top Branding with Official Logo */}
-        <div className="relative z-10 flex items-center justify-between">
-          <div className="bg-white/95 backdrop-blur-md px-5 py-2.5 rounded-2xl shadow-lg border border-white/20">
-            <DatPhuongLogo size="md" />
-          </div>
-          <div className="flex items-center gap-2 px-3.5 py-1.5 bg-black/40 backdrop-blur-md border border-white/15 rounded-full text-xs font-semibold text-white/90">
-            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-            <span>Hệ Thống Trực Tuyến 24/7</span>
-          </div>
-        </div>
-
-        {/* Center & Bottom Information Overlay */}
-        <div className="relative z-10 max-w-2xl mt-auto space-y-6">
-          <div className="space-y-2">
-            <span className="inline-block px-3 py-1 bg-white/20 backdrop-blur-md rounded-lg text-xs font-bold uppercase tracking-wider text-sky-200 border border-white/15">
-              Đạt Phương Năng Lượng
-            </span>
-            <h1 className="text-3xl xl:text-4xl font-extrabold tracking-tight text-white drop-shadow-md leading-tight">
-              Nhà Máy Thủy Điện Sơn Trà 1
-            </h1>
-            <p className="text-sm xl:text-base text-gray-200/90 leading-relaxed font-normal drop-shadow-xs max-w-xl">
-              Hệ thống quản lý nội bộ tập trung cho <strong>Kho vật tư</strong>, <strong>Bảo dưỡng & Sửa chữa thiết bị</strong> và <strong>Hồ sơ tài liệu kỹ thuật</strong>.
-            </p>
-          </div>
-
-          {/* 3 Core Functional Pillars Badges */}
-          <div className="grid grid-cols-3 gap-3 pt-2">
-            <div className="bg-black/35 backdrop-blur-md p-3.5 rounded-xl border border-white/10 flex items-center gap-3">
-              <div className="w-9 h-9 rounded-lg bg-blue-500/20 text-sky-300 flex items-center justify-center flex-shrink-0">
-                <Package size={20} />
-              </div>
-              <div>
-                <p className="text-xs font-bold text-white">Quản Lý Kho</p>
-                <p className="text-[11px] text-gray-300">Vật tư & Phụ tùng</p>
-              </div>
-            </div>
-
-            <div className="bg-black/35 backdrop-blur-md p-3.5 rounded-xl border border-white/10 flex items-center gap-3">
-              <div className="w-9 h-9 rounded-lg bg-amber-500/20 text-amber-300 flex items-center justify-center flex-shrink-0">
-                <Wrench size={20} />
-              </div>
-              <div>
-                <p className="text-xs font-bold text-white">Sửa Chữa</p>
-                <p className="text-[11px] text-gray-300">Lịch & Phiếu công tác</p>
-              </div>
-            </div>
-
-            <div className="bg-black/35 backdrop-blur-md p-3.5 rounded-xl border border-white/10 flex items-center gap-3">
-              <div className="w-9 h-9 rounded-lg bg-purple-500/20 text-purple-300 flex items-center justify-center flex-shrink-0">
-                <FileText size={20} />
-              </div>
-              <div>
-                <p className="text-xs font-bold text-white">Hồ Sơ Tài Liệu</p>
-                <p className="text-[11px] text-gray-300">Bản vẽ & Quy trình</p>
-              </div>
-            </div>
-          </div>
-        </div>
+      {/* LEFT 2 COLUMNS (2/3 width on desktop): ONLY the pure Sơn Trà image */}
+      <div className="hidden lg:block lg:col-span-2 relative h-full w-full bg-slate-900 overflow-hidden select-none">
+        <img
+          src={sontraImage}
+          alt="Sơn Trà"
+          className="w-full h-full object-cover object-center"
+          referrerPolicy="no-referrer"
+        />
       </div>
 
-      {/* RIGHT 1 COLUMN (1/3 width on desktop): Modern Login Form */}
+      {/* RIGHT 1 COLUMN (1/3 width on desktop): Logo at top & Modern Login Form */}
       <div className="w-full lg:col-span-1 min-h-screen flex flex-col justify-between p-6 sm:p-10 lg:p-8 xl:p-12 relative bg-white lg:bg-[#f8faff] lg:border-l border-[#e2eaf5] overflow-y-auto">
         
-        {/* Top Mobile Brand Banner (Visible only on mobile/tablet) */}
-        <div className="lg:hidden flex flex-col items-center text-center pt-2 pb-4">
-          <DatPhuongLogo size="lg" className="mb-2" />
-          <h2 className="text-xs font-bold text-[#005394] tracking-wider uppercase">
-            Nhà máy thủy điện Sơn Trà 1
-          </h2>
-        </div>
-
-        {/* Top Logo for Desktop Column */}
-        <div className="hidden lg:flex flex-col items-center text-center pt-2">
-          <DatPhuongLogo size="lg" className="mb-2 drop-shadow-2xs" />
-          <span className="text-[11px] font-bold text-[#005394] tracking-widest uppercase mt-0.5">
-            Nhà Máy Thủy Điện Sơn Trà 1
-          </span>
+        {/* Top Logo - DATPHUONG SON TRA ENERGY */}
+        <div className="flex flex-col items-center text-center pt-2 pb-2">
+          <DatPhuongLogo size="lg" showSubtitle={true} className="mb-2" />
         </div>
 
         {/* Main Login Form Container */}
-        <div className="w-full max-w-md mx-auto my-auto py-6">
+        <div className="w-full max-w-md mx-auto my-auto py-4">
           <div className="text-center mb-6">
             <h1 className="text-xl sm:text-2xl font-black text-[#002b55] uppercase tracking-tight">
-              Đăng Nhập Hệ Thống
+              ĐĂNG NHẬP HỆ THỐNG
             </h1>
             <p className="text-xs text-[#5e7087] mt-1">
               Nhập email và mật khẩu tài khoản nội bộ của bạn
@@ -222,7 +181,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
                   type="button"
                   id="login-toggle-password-btn"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3.5 text-[#6c7c93] hover:text-[#005394] transition-colors p-1"
+                  className="absolute right-3.5 text-[#6c7c93] hover:text-[#005394] transition-colors p-1 cursor-pointer"
                   title={showPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
                 >
                   {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
@@ -237,7 +196,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
                   type="checkbox"
                   checked={rememberMe}
                   onChange={(e) => setRememberMe(e.target.checked)}
-                  className="w-4 h-4 rounded text-[#005394] focus:ring-[#005394] border-[#cfdaf1]"
+                  className="w-4 h-4 rounded text-[#005394] focus:ring-[#005394] border-[#cfdaf1] cursor-pointer"
                 />
                 <span>Ghi nhớ đăng nhập</span>
               </label>
@@ -289,3 +248,4 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin }) => {
     </div>
   );
 };
+
