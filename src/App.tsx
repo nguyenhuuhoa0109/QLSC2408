@@ -27,6 +27,7 @@ import { WarehouseScreen } from './components/WarehouseScreen';
 import { MaintenanceScreen } from './components/MaintenanceScreen';
 import { DocumentsScreen } from './components/DocumentsScreen';
 import { ReportsScreen } from './components/ReportsScreen';
+import { UserManagementScreen } from './components/UserManagementScreen';
 import { ApprovalModal } from './components/ApprovalModal';
 import { StockTransactionModal } from './components/StockTransactionModal';
 import { ActivityDetailModal } from './components/ActivityDetailModal';
@@ -35,8 +36,8 @@ import { SupabaseService } from './services/supabaseService';
 import { supabase } from './lib/supabase';
 
 export default function App() {
-  // App state
-  const [isLoggedIn, setIsLoggedIn] = useState(true);
+  // App state - Default to not logged in as requested
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [user, setUser] = useState(INITIAL_USER);
   const [currentPlant, setCurrentPlant] = useState<PlantLocation>('Nhà máy thủy điện Sơn Trà 1');
   const [currentTab, setCurrentTab] = useState<NavigationTab>('tong-quan');
@@ -318,6 +319,12 @@ export default function App() {
             activities={activities}
           />
         );
+      case 'quan-ly-user':
+        return (
+          <UserManagementScreen
+            currentUser={user}
+          />
+        );
       default:
         return null;
     }
@@ -352,6 +359,7 @@ export default function App() {
               onOpenDatabaseStatus={() => setShowDatabaseModal(true)}
               isMobilePreview={isMobilePreview}
               onToggleMobilePreview={() => setIsMobilePreview(!isMobilePreview)}
+              onSelectTab={setCurrentTab}
             />
 
             <main className="flex-1 overflow-y-auto pb-20">
@@ -373,6 +381,7 @@ export default function App() {
               currentTab={currentTab}
               onSelectTab={setCurrentTab}
               plantName={currentPlant}
+              user={user}
             />
           </div>
 
@@ -392,6 +401,7 @@ export default function App() {
               onOpenDatabaseStatus={() => setShowDatabaseModal(true)}
               isMobilePreview={isMobilePreview}
               onToggleMobilePreview={() => setIsMobilePreview(!isMobilePreview)}
+              onSelectTab={setCurrentTab}
             />
 
             {/* Content Area */}

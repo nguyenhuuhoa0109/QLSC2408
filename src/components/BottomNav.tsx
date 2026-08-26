@@ -1,9 +1,9 @@
 import React from 'react';
 import { 
+  Home,
   Package, 
   Wrench, 
-  FileText,
-  LayoutDashboard
+  FileText
 } from 'lucide-react';
 import { NavigationTab } from '../types';
 
@@ -16,8 +16,8 @@ export const BottomNav: React.FC<BottomNavProps> = ({ currentTab, onSelectTab })
   const items = [
     {
       id: 'tong-quan' as NavigationTab,
-      label: 'Tổng quan',
-      icon: LayoutDashboard,
+      label: 'Trang chủ',
+      icon: Home,
     },
     {
       id: 'quan-ly-kho' as NavigationTab,

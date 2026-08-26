@@ -97,7 +97,19 @@ export interface TechnicalDocument {
   description: string;
 }
 
-export type NavigationTab = 'tong-quan' | 'quan-ly-kho' | 'quan-ly-sua-chua' | 'quan-ly-tai-lieu' | 'bao-cao';
+export interface DbUserRecord {
+  ID?: number | string;
+  id?: number | string;
+  Email: string;
+  Mat_khau: string;
+  Ho_ten: string;
+  Chuc_vu: string;
+  Phong_ban: string;
+  avatar_url?: string;
+  created_at?: string;
+}
+
+export type NavigationTab = 'tong-quan' | 'quan-ly-kho' | 'quan-ly-sua-chua' | 'quan-ly-tai-lieu' | 'bao-cao' | 'quan-ly-user';
 
 export type PlantLocation = 'Nhà máy thủy điện Sơn Trà 1' | 'Hòa Bình Plant';
 

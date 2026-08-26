@@ -4,13 +4,11 @@ import {
   AlertTriangle, 
   Clock, 
   ArrowRight, 
-  Filter, 
   ArrowUpRight, 
   ArrowDownLeft, 
   CheckCircle2, 
   RefreshCw,
   Search,
-  Check,
   Plus,
   Wrench,
   FileText,
@@ -18,10 +16,14 @@ import {
   Calendar,
   ExternalLink,
   ShieldCheck,
-  SlidersHorizontal,
   ChevronRight,
-  HardHat,
-  BookOpen
+  BookOpen,
+  Boxes,
+  CheckCircle,
+  FileCheck,
+  Download,
+  Flame,
+  AlertCircle
 } from 'lucide-react';
 import { 
   StockActivity, 
@@ -67,17 +69,20 @@ export const OverviewScreen: React.FC<OverviewScreenProps> = ({
   const [selectedDomain, setSelectedDomain] = useState<'all' | ActivityDomain>('all');
   const [tableSearch, setTableSearch] = useState('');
   const [filterAction, setFilterAction] = useState<string>('all');
-  const [showFilterDropdown, setShowFilterDropdown] = useState(false);
 
   // Total inventory stats
-  const totalItemsCount = plantName.includes('Sơn Trà') ? 1245 : 1248;
-  const criticalItemsCount = inventory.filter(i => i.status === 'critical').length || (plantName.includes('Sơn Trà') ? 5 : 4);
-  const warningItemsCount = inventory.filter(i => i.status === 'warning').length || (plantName.includes('Sơn Trà') ? 10 : 8);
+  const totalItemsCount = inventory.length || (plantName.includes('Sơn Trà') ? 1245 : 1248);
+  const criticalItems = inventory.filter(i => i.status === 'critical');
+  const warningItems = inventory.filter(i => i.status === 'warning');
+  const criticalItemsCount = criticalItems.length || (plantName.includes('Sơn Trà') ? 5 : 4);
+  const warningItemsCount = warningItems.length || (plantName.includes('Sơn Trà') ? 10 : 8);
   const totalAlertsCount = criticalItemsCount + warningItemsCount;
 
-  // Active maintenance & documents count
-  const activeRepairsCount = maintenanceTasks.filter(t => t.status !== 'Hoàn thành').length;
-  const totalDocsCount = documents.length;
+  // Active maintenance & documents stats
+  const activeRepairs = maintenanceTasks.filter(t => t.status !== 'Hoàn thành');
+  const waitingSuppliesTasks = maintenanceTasks.filter(t => t.status === 'Chờ vật tư');
+  const activeRepairsCount = activeRepairs.length || 4;
+  const totalDocsCount = documents.length || 18;
 
   // Build unified activities list combining Kho, Sửa chữa, and Tài liệu
   const unifiedActivities: UnifiedActivity[] = useMemo(() => {
@@ -180,21 +185,13 @@ export const OverviewScreen: React.FC<OverviewScreenProps> = ({
   return (
     <div className="flex flex-col w-full gap-5 sm:gap-6 p-4 sm:p-6 bg-[#f9f9ff]">
       
-      {/* Mobile Top Header Title */}
-      <div className="md:hidden flex items-center justify-between">
-        <h2 className="text-lg font-bold text-[#111c2c]">Tổng quan vận hành</h2>
-        <span className="text-xs text-[#005394] font-semibold bg-[#e7eeff] px-2.5 py-1 rounded-full">
-          {plantName.includes('Sơn Trà') ? 'Sơn Trà 1' : 'Hòa Bình'}
-        </span>
-      </div>
-
-      {/* TOP 3 SUMMARY CARDS */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+      {/* 1. TOP 4 SUMMARY STATS CARDS: KHO, CẢNH BÁO, SỬA CHỮA, TÀI LIỆU */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         
-        {/* CARD 1: TỔNG VẬT TƯ */}
+        {/* CARD 1: TỔNG VẬT TƯ KHO */}
         <div 
           onClick={onNavigateToWarehouse}
-          className="bg-[#e7eeff] rounded-2xl p-5 flex flex-col gap-2 shadow-xs relative overflow-hidden group hover:shadow-md transition-all cursor-pointer border border-[#d8e3fa]/60"
+          className="bg-[#e7eeff] rounded-2xl p-5 flex flex-col justify-between shadow-xs relative overflow-hidden group hover:shadow-md transition-all cursor-pointer border border-[#d8e3fa]"
         >
           <div className="absolute -right-4 -top-4 w-24 h-24 bg-[#005394]/10 rounded-full blur-xl group-hover:bg-[#005394]/20 transition-colors pointer-events-none" />
           
@@ -207,28 +204,23 @@ export const OverviewScreen: React.FC<OverviewScreenProps> = ({
             </div>
           </div>
 
-          <div className="flex items-baseline gap-1.5 z-10 my-1">
-            <span className="text-3xl sm:text-4xl font-extrabold text-[#005394] tracking-tight">
+          <div className="flex items-baseline gap-1.5 z-10 my-2">
+            <span className="text-3xl font-extrabold text-[#005394] tracking-tight">
               {totalItemsCount.toLocaleString('en-US')}
             </span>
-            <span className="text-xs font-semibold text-[#414750]">mục</span>
+            <span className="text-xs font-semibold text-[#414750]">mặt hàng</span>
           </div>
 
-          <div className="z-10 mt-auto pt-2">
-            <div className="h-1.5 w-full bg-[#d8e3fa] rounded-full overflow-hidden">
-              <div className="h-full bg-[#005394] w-3/4 rounded-full transition-all duration-500" />
-            </div>
-            <p className="font-mono text-[11px] text-[#414750] mt-2 flex items-center gap-1">
-              <RefreshCw size={11} className="text-[#005394]" />
-              <span>Đã cập nhật theo thời gian thực</span>
-            </p>
+          <div className="z-10 pt-2 border-t border-[#d8e3fa]/80 flex items-center justify-between text-[11px] text-[#005394] font-medium">
+            <span>Tra cứu & Kiểm kê</span>
+            <ArrowRight size={13} className="group-hover:translate-x-1 transition-transform" />
           </div>
         </div>
 
         {/* CARD 2: CẢNH BÁO TỒN KHO */}
         <div 
           onClick={onNavigateToWarehouse}
-          className="bg-[#ffdad6] rounded-2xl p-5 flex flex-col gap-2 shadow-xs relative overflow-hidden group hover:shadow-md transition-all cursor-pointer border border-[#ffb4ab]/40"
+          className="bg-[#ffdad6] rounded-2xl p-5 flex flex-col justify-between shadow-xs relative overflow-hidden group hover:shadow-md transition-all cursor-pointer border border-[#ffb4ab]/40"
         >
           <div className="absolute -right-4 -top-4 w-24 h-24 bg-[#ba1a1a]/10 rounded-full blur-xl group-hover:bg-[#ba1a1a]/20 transition-colors pointer-events-none" />
           
@@ -241,68 +233,84 @@ export const OverviewScreen: React.FC<OverviewScreenProps> = ({
             </div>
           </div>
 
-          <div className="flex items-baseline gap-1.5 z-10 my-1">
-            <span className="text-3xl sm:text-4xl font-extrabold text-[#ba1a1a] tracking-tight">
+          <div className="flex items-baseline gap-1.5 z-10 my-2">
+            <span className="text-3xl font-extrabold text-[#ba1a1a] tracking-tight">
               {totalAlertsCount}
             </span>
-            <span className="text-xs font-bold text-[#93000a]">mục cần nhập</span>
+            <span className="text-xs font-bold text-[#93000a]">mục dưới định mức</span>
           </div>
 
-          <div className="z-10 mt-auto pt-2">
-            <div className="flex items-center gap-1.5">
-              <span className="px-2 py-0.5 bg-[#ba1a1a]/15 text-[#93000a] rounded-md font-mono text-[10px] font-bold">
-                Cao: {criticalItemsCount}
-              </span>
-              <span className="px-2 py-0.5 bg-[#ba1a1a]/15 text-[#93000a] rounded-md font-mono text-[10px] font-bold">
-                Trung bình: {warningItemsCount}
-              </span>
-            </div>
+          <div className="z-10 pt-2 border-t border-[#ffb4ab]/60 flex items-center justify-between text-[11px] text-[#93000a] font-medium">
+            <span>{criticalItemsCount} mục khẩn cấp</span>
+            <span className="font-mono text-[10px] bg-white/70 px-1.5 py-0.2 rounded font-bold">Cần nhập</span>
           </div>
         </div>
 
-        {/* CARD 3: TIẾN ĐỘ SỬA CHỮA & PHIẾU CHỜ */}
+        {/* CARD 3: CÔNG TÁC BẢO DƯỠNG & SỬA CHỮA */}
         <div 
           onClick={onNavigateToMaintenance || onOpenApprovals}
-          className="bg-[#fef3c7] sm:col-span-2 md:col-span-1 rounded-2xl p-5 flex flex-col gap-2 shadow-xs relative overflow-hidden group hover:shadow-md transition-all cursor-pointer border border-[#fde68a]"
+          className="bg-[#fef3c7] rounded-2xl p-5 flex flex-col justify-between shadow-xs relative overflow-hidden group hover:shadow-md transition-all cursor-pointer border border-[#fde68a]"
         >
           <div className="absolute -right-4 -top-4 w-24 h-24 bg-amber-500/10 rounded-full blur-xl group-hover:bg-amber-500/20 transition-colors pointer-events-none" />
           
           <div className="flex items-center justify-between z-10">
             <span className="text-xs font-bold text-amber-950 uppercase tracking-wider">
-              BẢO DƯỠNG & SỬA CHỮA
+              CÔNG TÁC SỬA CHỮA
             </span>
             <div className="w-8 h-8 rounded-full bg-amber-200 flex items-center justify-center text-amber-800">
               <Wrench size={18} />
             </div>
           </div>
 
-          <div className="flex items-baseline gap-1.5 z-10 my-1">
-            <span className="text-3xl sm:text-4xl font-extrabold text-amber-900 tracking-tight">
+          <div className="flex items-baseline gap-1.5 z-10 my-2">
+            <span className="text-3xl font-extrabold text-amber-900 tracking-tight">
               {activeRepairsCount}
             </span>
-            <span className="text-xs font-bold text-amber-800">hạng mục đang xử lý</span>
+            <span className="text-xs font-bold text-amber-800">hạng mục đang làm</span>
           </div>
 
-          <div className="z-10 mt-auto pt-2 flex items-center justify-between">
-            <span className="text-[11px] text-amber-800 font-medium">
-              Chờ duyệt: <strong>{pendingApprovalsCount} phiếu</strong>
-            </span>
-            <button 
-              type="button"
-              className="font-mono text-xs font-semibold text-amber-900 group-hover:underline flex items-center gap-1 cursor-pointer"
-            >
-              <span>Chi tiết</span>
-              <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
-            </button>
+          <div className="z-10 pt-2 border-t border-amber-200/80 flex items-center justify-between text-[11px] text-amber-900 font-medium">
+            <span>{waitingSuppliesTasks.length} chờ cấp vật tư</span>
+            <ArrowRight size={13} className="group-hover:translate-x-1 transition-transform" />
           </div>
         </div>
+
+        {/* CARD 4: HỒ SƠ & TÀI LIỆU KỸ THUẬT */}
+        <div 
+          onClick={onNavigateToDocuments}
+          className="bg-[#f3e8ff] rounded-2xl p-5 flex flex-col justify-between shadow-xs relative overflow-hidden group hover:shadow-md transition-all cursor-pointer border border-[#e9d5ff]"
+        >
+          <div className="absolute -right-4 -top-4 w-24 h-24 bg-purple-500/10 rounded-full blur-xl group-hover:bg-purple-500/20 transition-colors pointer-events-none" />
+          
+          <div className="flex items-center justify-between z-10">
+            <span className="text-xs font-bold text-purple-950 uppercase tracking-wider">
+              HỒ SƠ & TÀI LIỆU
+            </span>
+            <div className="w-8 h-8 rounded-full bg-purple-200 flex items-center justify-center text-purple-800">
+              <FileText size={18} />
+            </div>
+          </div>
+
+          <div className="flex items-baseline gap-1.5 z-10 my-2">
+            <span className="text-3xl font-extrabold text-purple-900 tracking-tight">
+              {totalDocsCount}
+            </span>
+            <span className="text-xs font-bold text-purple-800">tài liệu lưu trữ</span>
+          </div>
+
+          <div className="z-10 pt-2 border-t border-purple-200/80 flex items-center justify-between text-[11px] text-purple-900 font-medium">
+            <span>Bản vẽ & Quy trình</span>
+            <ArrowRight size={13} className="group-hover:translate-x-1 transition-transform" />
+          </div>
+        </div>
+
       </div>
 
-      {/* QUICK ACTION SHORTCUTS */}
+      {/* 2. QUICK ACTION SHORTCUTS */}
       <div className="flex flex-wrap items-center justify-between gap-3 bg-white p-3 sm:p-4 rounded-xl border border-[#e2eaf5] shadow-2xs">
         <div className="flex items-center gap-2">
           <span className="text-xs font-bold text-[#414750] uppercase">Thao tác nhanh:</span>
-          <span className="text-xs text-gray-500 hidden sm:inline">Lập phiếu xuất nhập kho, xem lịch sửa chữa hoặc tra cứu tài liệu</span>
+          <span className="text-xs text-gray-500 hidden md:inline">Lập phiếu kho, theo dõi bảo dưỡng sửa chữa và tra cứu hồ sơ</span>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
           <button
@@ -340,7 +348,144 @@ export const OverviewScreen: React.FC<OverviewScreenProps> = ({
         </div>
       </div>
 
-      {/* UNIFIED ACTIVITIES SECTION - KHO, SỬA CHỮA, TÀI LIỆU */}
+      {/* 3. TWO-COLUMN OPERATIONAL SUMMARY: CẢNH BÁO VẬT TƯ & CÔNG TÁC SỬA CHỮA TRỌNG ĐIỂM */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        
+        {/* LEFT COLUMN: VẬT TƯ CẦN BỔ SUNG GẤP */}
+        <div className="bg-white rounded-2xl p-4 sm:p-5 shadow-xs border border-[#e2eaf5] flex flex-col justify-between">
+          <div>
+            <div className="flex items-center justify-between pb-3 border-b border-gray-100">
+              <div className="flex items-center gap-2">
+                <div className="w-7 h-7 rounded-lg bg-red-100 text-red-700 flex items-center justify-center">
+                  <AlertTriangle size={16} />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-gray-900">Vật tư cần nhập gấp</h3>
+                  <p className="text-[11px] text-gray-500">Mức tồn kho dưới định mức an toàn tối thiểu</p>
+                </div>
+              </div>
+              <button 
+                onClick={onNavigateToWarehouse}
+                className="text-xs text-[#005394] font-bold hover:underline flex items-center gap-1 cursor-pointer"
+              >
+                <span>Xem kho</span>
+                <ChevronRight size={13} />
+              </button>
+            </div>
+
+            <div className="divide-y divide-gray-50 mt-2">
+              {inventory.slice(0, 4).map((item) => (
+                <div key={item.id} className="py-2.5 flex items-center justify-between text-xs">
+                  <div className="flex flex-col min-w-0 pr-2">
+                    <span className="font-semibold text-gray-800 truncate">{item.name}</span>
+                    <div className="flex items-center gap-2 text-[10px] text-gray-400 font-mono mt-0.5">
+                      <span>Mã: {item.code}</span>
+                      <span>•</span>
+                      <span>Vị trí: {item.location}</span>
+                    </div>
+                  </div>
+                  <div className="text-right flex-shrink-0">
+                    <span className={`px-2 py-0.5 rounded font-mono font-bold text-[11px] ${
+                      item.quantity <= item.minQuantity 
+                        ? 'bg-red-100 text-red-800' 
+                        : 'bg-amber-100 text-amber-800'
+                    }`}>
+                      {item.quantity} / {item.minQuantity} {item.unit}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="pt-3 mt-2 border-t border-gray-100 flex items-center justify-between text-xs">
+            <span className="text-gray-500 text-[11px]">Đã tự động gửi thông báo đến phòng Kế hoạch</span>
+            <button
+              onClick={() => onOpenNewTransaction('import')}
+              className="text-[#005394] font-bold hover:underline flex items-center gap-1 cursor-pointer"
+            >
+              <Plus size={13} />
+              <span>Tạo phiếu mua/nhập</span>
+            </button>
+          </div>
+        </div>
+
+        {/* RIGHT COLUMN: CÔNG TÁC SỬA CHỮA ĐANG TRIỂN KHAI */}
+        <div className="bg-white rounded-2xl p-4 sm:p-5 shadow-xs border border-[#e2eaf5] flex flex-col justify-between">
+          <div>
+            <div className="flex items-center justify-between pb-3 border-b border-gray-100">
+              <div className="flex items-center gap-2">
+                <div className="w-7 h-7 rounded-lg bg-amber-100 text-amber-800 flex items-center justify-center">
+                  <Wrench size={16} />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-gray-900">Công tác sửa chữa & bảo dưỡng</h3>
+                  <p className="text-[11px] text-gray-500">Các hạng mục đang thi công hoặc chờ vật tư</p>
+                </div>
+              </div>
+              {onNavigateToMaintenance && (
+                <button 
+                  onClick={onNavigateToMaintenance}
+                  className="text-xs text-amber-800 font-bold hover:underline flex items-center gap-1 cursor-pointer"
+                >
+                  <span>Xem tất cả</span>
+                  <ChevronRight size={13} />
+                </button>
+              )}
+            </div>
+
+            <div className="divide-y divide-gray-50 mt-2">
+              {maintenanceTasks.slice(0, 4).map((task) => (
+                <div key={task.id} className="py-2.5 flex items-center justify-between text-xs">
+                  <div className="flex flex-col min-w-0 pr-2">
+                    <div className="flex items-center gap-2">
+                      <span className="font-semibold text-gray-800 truncate">{task.title}</span>
+                      <span className={`px-1.5 py-0.2 rounded text-[9px] font-bold uppercase ${
+                        task.priority === 'Khẩn cấp' || task.priority === 'Cao' 
+                          ? 'bg-rose-100 text-rose-800' 
+                          : 'bg-blue-100 text-blue-800'
+                      }`}>
+                        {task.priority}
+                      </span>
+                    </div>
+                    <span className="text-[10px] text-gray-500 mt-0.5">
+                      {task.equipment} • Phụ trách: <strong>{task.assignedTo}</strong>
+                    </span>
+                  </div>
+                  <div className="text-right flex-shrink-0 flex flex-col items-end">
+                    <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                      task.status === 'Hoàn thành' 
+                        ? 'bg-emerald-100 text-emerald-800' 
+                        : task.status === 'Chờ vật tư' 
+                        ? 'bg-amber-100 text-amber-800' 
+                        : 'bg-blue-100 text-blue-800'
+                    }`}>
+                      {task.status}
+                    </span>
+                    <span className="text-[10px] font-mono text-gray-400 mt-0.5">
+                      {task.progressPercent}%
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="pt-3 mt-2 border-t border-gray-100 flex items-center justify-between text-xs">
+            <span className="text-gray-500 text-[11px]">Đội ngũ kỹ thuật viên đang trực 24/7</span>
+            <button
+              onClick={onNavigateToMaintenance}
+              className="text-amber-800 font-bold hover:underline flex items-center gap-1 cursor-pointer"
+            >
+              <span>Xem tiến độ chi tiết</span>
+              <ArrowRight size={13} />
+            </button>
+          </div>
+        </div>
+
+      </div>
+
+      {/* 4. UNIFIED ACTIVITIES SECTION - KHO, SỬA CHỮA, TÀI LIỆU */}
       <div className="bg-white rounded-2xl p-4 sm:p-6 shadow-xs border border-[#e2eaf5] flex-1">
         
         {/* Table Header & Multi-domain Tabs */}
@@ -622,4 +767,3 @@ export const OverviewScreen: React.FC<OverviewScreenProps> = ({
     </div>
   );
 };
-

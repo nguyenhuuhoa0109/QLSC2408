@@ -1,6 +1,7 @@
 import { supabase, SUPABASE_URL, SUPABASE_ANON_KEY } from '../lib/supabase';
 import { 
   User,
+  DbUserRecord,
   InventoryItem, 
   StockActivity, 
   ApprovalTicket, 
@@ -662,6 +663,186 @@ export const SupabaseService = {
     } catch (e) {
       console.error('Lỗi xóa tài liệu trên Supabase:', e);
       return false;
+    }
+  },
+
+  // 6. USER TABLE CRUD (Dành cho Quản trị viên / Admin)
+  async getAllUsers(): Promise<DbUserRecord[]> {
+    try {
+      // Thử query Supabase SDK
+      const { data, error } = await supabase
+        .from('User')
+        .select('*');
+
+      if (!error && data && data.length > 0) {
+        return data.map((row: any) => ({
+          ID: row.ID !== undefined ? row.ID : row.id,
+          id: row.id !== undefined ? row.id : row.ID,
+          Email: row.Email || row.email || '',
+          Mat_khau: row.Mat_khau || row.mat_khau || row.password || '',
+          Ho_ten: row.Ho_ten || row.ho_ten || row.name || row.full_name || 'Người dùng',
+          Chuc_vu: row.Chuc_vu || row.chuc_vu || row.role || 'Kỹ sư Vận hành',
+          Phong_ban: row.Phong_ban || row.phong_ban || row.department || 'Ban Kỹ Thuật & Sửa Chữa (KTSC)'
+        }));
+      }
+
+      // Thử qua REST API
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/User?select=*`, {
+        headers: {
+          apikey: SUPABASE_ANON_KEY,
+          Authorization: `Bearer ${SUPABASE_ANON_KEY}`
+        }
+      });
+      if (res.ok) {
+        const restData = await res.json();
+        if (Array.isArray(restData)) {
+          return restData.map((row: any) => ({
+            ID: row.ID !== undefined ? row.ID : row.id,
+            id: row.id !== undefined ? row.id : row.ID,
+            Email: row.Email || row.email || '',
+            Mat_khau: row.Mat_khau || row.mat_khau || row.password || '',
+            Ho_ten: row.Ho_ten || row.ho_ten || row.name || row.full_name || 'Người dùng',
+            Chuc_vu: row.Chuc_vu || row.chuc_vu || row.role || 'Kỹ sư Vận hành',
+            Phong_ban: row.Phong_ban || row.phong_ban || row.department || 'Ban Kỹ Thuật & Sửa Chữa (KTSC)'
+          }));
+        }
+      }
+      return [];
+    } catch (e) {
+      console.warn('Lỗi lấy danh sách tài khoản từ bảng User:', e);
+      return [];
+    }
+  },
+
+  async createDbUser(user: DbUserRecord): Promise<{ success: boolean; message: string; data?: any }> {
+    try {
+      const payload: any = {
+        Email: user.Email.trim(),
+        Mat_khau: user.Mat_khau.trim(),
+        Ho_ten: user.Ho_ten.trim(),
+        Chuc_vu: user.Chuc_vu.trim(),
+        Phong_ban: user.Phong_ban.trim()
+      };
+
+      // Thử dùng Supabase SDK
+      const { data, error } = await supabase
+        .from('User')
+        .insert(payload)
+        .select();
+
+      if (!error) {
+        return { success: true, message: 'Đã thêm tài khoản người dùng thành công!', data: data?.[0] };
+      }
+
+      // Thử REST API fallback
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/User`, {
+        method: 'POST',
+        headers: {
+          apikey: SUPABASE_ANON_KEY,
+          Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+          'Content-Type': 'application/json',
+          'Prefer': 'return=representation'
+        },
+        body: JSON.stringify(payload)
+      });
+
+      if (res.ok) {
+        const resData = await res.json();
+        return { success: true, message: 'Đã thêm tài khoản người dùng thành công!', data: resData?.[0] };
+      } else {
+        const errJson = await res.json().catch(() => ({ message: 'Không thể thêm dữ liệu' }));
+        return { 
+          success: false, 
+          message: errJson.message || error?.message || 'Không thể thêm người dùng vào bảng User' 
+        };
+      }
+    } catch (e: any) {
+      console.error('Lỗi thêm người dùng:', e);
+      return { success: false, message: e?.message || 'Có lỗi xảy ra khi tạo người dùng' };
+    }
+  },
+
+  async updateDbUser(identifier: string | number, updates: Partial<DbUserRecord>): Promise<{ success: boolean; message: string }> {
+    try {
+      const payload: any = {};
+      if (updates.Email) payload.Email = updates.Email.trim();
+      if (updates.Mat_khau) payload.Mat_khau = updates.Mat_khau.trim();
+      if (updates.Ho_ten) payload.Ho_ten = updates.Ho_ten.trim();
+      if (updates.Chuc_vu) payload.Chuc_vu = updates.Chuc_vu.trim();
+      if (updates.Phong_ban) payload.Phong_ban = updates.Phong_ban.trim();
+
+      // Thử update theo ID hoặc Email
+      let query = supabase.from('User').update(payload);
+      if (typeof identifier === 'number' || !isNaN(Number(identifier))) {
+        query = query.or(`ID.eq.${identifier},id.eq.${identifier}`);
+      } else {
+        query = query.or(`Email.eq.${identifier},email.eq.${identifier}`);
+      }
+
+      const { error } = await query;
+      if (!error) {
+        return { success: true, message: 'Đã cập nhật thông tin người dùng thành công!' };
+      }
+
+      // Fallback REST
+      const isNum = typeof identifier === 'number' || !isNaN(Number(identifier));
+      const param = isNum ? `ID=eq.${identifier}` : `Email=eq.${encodeURIComponent(String(identifier))}`;
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/User?${param}`, {
+        method: 'PATCH',
+        headers: {
+          apikey: SUPABASE_ANON_KEY,
+          Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(payload)
+      });
+
+      if (res.ok) {
+        return { success: true, message: 'Đã cập nhật thông tin người dùng thành công!' };
+      } else {
+        const errJson = await res.json().catch(() => ({ message: 'Không thể cập nhật dữ liệu' }));
+        return { success: false, message: errJson.message || error?.message || 'Lỗi cập nhật người dùng' };
+      }
+    } catch (e: any) {
+      console.error('Lỗi cập nhật người dùng:', e);
+      return { success: false, message: e?.message || 'Có lỗi xảy ra khi cập nhật' };
+    }
+  },
+
+  async deleteDbUser(identifier: string | number): Promise<{ success: boolean; message: string }> {
+    try {
+      let query = supabase.from('User').delete();
+      const isNum = typeof identifier === 'number' || !isNaN(Number(identifier));
+      if (isNum) {
+        query = query.or(`ID.eq.${identifier},id.eq.${identifier}`);
+      } else {
+        query = query.or(`Email.eq.${identifier},email.eq.${identifier}`);
+      }
+
+      const { error } = await query;
+      if (!error) {
+        return { success: true, message: 'Đã xóa tài khoản người dùng thành công!' };
+      }
+
+      // Fallback REST
+      const param = isNum ? `ID=eq.${identifier}` : `Email=eq.${encodeURIComponent(String(identifier))}`;
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/User?${param}`, {
+        method: 'DELETE',
+        headers: {
+          apikey: SUPABASE_ANON_KEY,
+          Authorization: `Bearer ${SUPABASE_ANON_KEY}`
+        }
+      });
+
+      if (res.ok) {
+        return { success: true, message: 'Đã xóa tài khoản người dùng thành công!' };
+      } else {
+        const errJson = await res.json().catch(() => ({ message: 'Không thể xóa dữ liệu' }));
+        return { success: false, message: errJson.message || error?.message || 'Lỗi xóa người dùng' };
+      }
+    } catch (e: any) {
+      console.error('Lỗi xóa người dùng:', e);
+      return { success: false, message: e?.message || 'Có lỗi xảy ra khi xóa người dùng' };
     }
   },
 
