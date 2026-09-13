@@ -111,6 +111,10 @@ export interface DbUserRecord {
 
 export type NavigationTab = 'tong-quan' | 'quan-ly-kho' | 'quan-ly-sua-chua' | 'quan-ly-tai-lieu' | 'bao-cao' | 'quan-ly-user';
 
+export type WarehouseSubTab = 'dashboard' | 'danh-muc' | 'nhap-xuat' | 'kiem-ke';
+
+export type MaintenanceSubTab = 'dashboard' | 'danh-muc-he-thong' | 'ke-hoach' | 'dang-ky' | 'lich-su';
+
 export type PlantLocation = 'Nhà máy thủy điện Sơn Trà 1' | 'Hòa Bình Plant';
 
 export type ActivityDomain = 'warehouse' | 'maintenance' | 'document';

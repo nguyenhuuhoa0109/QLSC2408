@@ -16,7 +16,9 @@ import {
   ApprovalTicket, 
   MaintenanceTask, 
   TechnicalDocument,
-  UnifiedActivity 
+  UnifiedActivity,
+  WarehouseSubTab,
+  MaintenanceSubTab 
 } from './types';
 import { LoginScreen } from './components/LoginScreen';
 import { Header } from './components/Header';
@@ -41,6 +43,8 @@ export default function App() {
   const [user, setUser] = useState(INITIAL_USER);
   const [currentPlant, setCurrentPlant] = useState<PlantLocation>('Nhà máy thủy điện Sơn Trà 1');
   const [currentTab, setCurrentTab] = useState<NavigationTab>('tong-quan');
+  const [warehouseSubTab, setWarehouseSubTab] = useState<WarehouseSubTab>('dashboard');
+  const [maintenanceSubTab, setMaintenanceSubTab] = useState<MaintenanceSubTab>('dashboard');
   const [searchQuery, setSearchQuery] = useState('');
   const [isMobilePreview, setIsMobilePreview] = useState(false);
 
@@ -288,6 +292,8 @@ export default function App() {
         return (
           <WarehouseScreen
             inventory={inventory}
+            currentSubTab={warehouseSubTab}
+            onSelectSubTab={setWarehouseSubTab}
             onOpenNewTransaction={(type, item) => setTransactionModalConfig({ isOpen: true, type, preselectedItem: item })}
             onAddNewItem={handleAddNewInventoryItem}
             onEditItem={handleEditInventoryItem}
@@ -298,6 +304,8 @@ export default function App() {
         return (
           <MaintenanceScreen
             tasks={maintenanceTasks}
+            currentSubTab={maintenanceSubTab}
+            onSelectSubTab={setMaintenanceSubTab}
             onAddTask={handleAddMaintenanceTask}
             onEditTask={handleEditMaintenanceTask}
             onDeleteTask={handleDeleteMaintenanceTask}
@@ -379,9 +387,21 @@ export default function App() {
           <div className="hidden lg:block">
             <Sidebar
               currentTab={currentTab}
-              onSelectTab={setCurrentTab}
+              onSelectTab={(tab, warehouseSub, maintenanceSub) => {
+                setCurrentTab(tab);
+                if (warehouseSub) {
+                  setWarehouseSubTab(warehouseSub);
+                }
+                if (maintenanceSub) {
+                  setMaintenanceSubTab(maintenanceSub);
+                }
+              }}
               plantName={currentPlant}
               user={user}
+              currentWarehouseSubTab={warehouseSubTab}
+              onSelectWarehouseSubTab={setWarehouseSubTab}
+              currentMaintenanceSubTab={maintenanceSubTab}
+              onSelectMaintenanceSubTab={setMaintenanceSubTab}
             />
           </div>
 

@@ -16,9 +16,22 @@ import {
   Edit2,
   Trash2,
   X,
-  AlertCircle
+  AlertCircle,
+  FolderTree,
+  FolderOpen,
+  Folder,
+  LayoutDashboard,
+  ChevronRight,
+  Home,
+  Sliders,
+  Boxes,
+  ArrowLeftRight,
+  ClipboardCheck
 } from 'lucide-react';
-import { InventoryItem } from '../types';
+import { InventoryItem, WarehouseSubTab } from '../types';
+import { WarehouseTreeView } from './warehouse/WarehouseTreeView';
+import { WarehouseDashboardView } from './warehouse/WarehouseDashboardView';
+import { DEFAULT_WAREHOUSE_TREE, WarehouseTreeNode } from './warehouse/warehouseTreeData';
 
 interface WarehouseScreenProps {
   inventory: InventoryItem[];
@@ -26,6 +39,8 @@ interface WarehouseScreenProps {
   onAddNewItem: (item: InventoryItem) => void;
   onEditItem?: (item: InventoryItem) => void;
   onDeleteItem?: (itemId: string) => void;
+  currentSubTab?: WarehouseSubTab;
+  onSelectSubTab?: (subTab: WarehouseSubTab) => void;
 }
 
 export const WarehouseScreen: React.FC<WarehouseScreenProps> = ({
@@ -33,8 +48,36 @@ export const WarehouseScreen: React.FC<WarehouseScreenProps> = ({
   onOpenNewTransaction,
   onAddNewItem,
   onEditItem,
-  onDeleteItem
+  onDeleteItem,
+  currentSubTab,
+  onSelectSubTab
 }) => {
+  const [treeData, setTreeData] = useState<WarehouseTreeNode>(DEFAULT_WAREHOUSE_TREE);
+  // Default to Dashboard Kho as requested by user
+  const [selectedNode, setSelectedNode] = useState<WarehouseTreeNode>(
+    DEFAULT_WAREHOUSE_TREE.children?.[0] || DEFAULT_WAREHOUSE_TREE
+  );
+  const [showTreeSidebar, setShowTreeSidebar] = useState(true);
+
+  // Sync when currentSubTab changes from Sidebar
+  React.useEffect(() => {
+    if (!currentSubTab) return;
+    if (currentSubTab === 'dashboard') {
+      const dashNode = treeData.children?.find(c => c.type === 'dashboard');
+      if (dashNode) setSelectedNode(dashNode);
+    } else if (currentSubTab === 'danh-muc') {
+      const allNode = treeData.children?.find(c => c.type === 'all') || treeData;
+      setSelectedNode(allNode);
+      setSelectedCategory('all');
+    } else if (currentSubTab === 'nhap-xuat') {
+      const allNode = treeData.children?.find(c => c.type === 'all') || treeData;
+      setSelectedNode(allNode);
+    } else if (currentSubTab === 'kiem-ke') {
+      const allNode = treeData.children?.find(c => c.type === 'all') || treeData;
+      setSelectedNode(allNode);
+    }
+  }, [currentSubTab, treeData]);
+
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [statusFilter, setStatusFilter] = useState<'all' | 'critical' | 'warning' | 'normal'>('all');
@@ -57,18 +100,121 @@ export const WarehouseScreen: React.FC<WarehouseScreenProps> = ({
 
   const categories = ['Cơ khí', 'Điện - Tự động hóa', 'Dầu mỡ nhờn', 'Vật tư tiêu hao', 'Cảm biến & Đo lường'];
 
+  // Tree Node selection helper
+  const handleSelectTreeNode = (node: WarehouseTreeNode) => {
+    setSelectedNode(node);
+    if (node.categoryFilter) {
+      setSelectedCategory(node.categoryFilter);
+    } else if (node.type === 'all') {
+      setSelectedCategory('all');
+    }
+  };
+
+  // Find node by Category
+  const findNodeByCategory = (root: WarehouseTreeNode, cat: string): WarehouseTreeNode | null => {
+    if (root.categoryFilter === cat) return root;
+    if (root.children) {
+      for (const child of root.children) {
+        const found = findNodeByCategory(child, cat);
+        if (found) return found;
+      }
+    }
+    return null;
+  };
+
+  const handleSelectCategoryFromChips = (cat: string) => {
+    setSelectedCategory(cat);
+    if (cat === 'all') {
+      const allNode = treeData.children?.find(c => c.type === 'all') || treeData;
+      setSelectedNode(allNode);
+    } else {
+      const catNode = findNodeByCategory(treeData, cat);
+      if (catNode) {
+        setSelectedNode(catNode);
+      }
+    }
+  };
+
+  // Add custom folder handler
+  const handleAddCustomFolder = (parentId: string, folderName: string) => {
+    const newFolderNode: WarehouseTreeNode = {
+      id: `custom-folder-${Date.now()}`,
+      name: folderName,
+      type: 'subcategory',
+      isCustom: true,
+      subFilterKeyword: folderName.toLowerCase(),
+    };
+
+    const addNodeRecursive = (node: WarehouseTreeNode): WarehouseTreeNode => {
+      if (node.id === parentId) {
+        newFolderNode.categoryFilter = node.categoryFilter;
+        return {
+          ...node,
+          isExpanded: true,
+          children: [...(node.children || []), newFolderNode],
+        };
+      }
+      if (node.children) {
+        return {
+          ...node,
+          children: node.children.map(addNodeRecursive),
+        };
+      }
+      return node;
+    };
+
+    setTreeData(prev => addNodeRecursive(prev));
+    setSelectedNode(newFolderNode);
+  };
+
+  // Filter items by Tree Node, Search, and Status
   const filteredItems = inventory.filter((item) => {
+    // 1. Search filter
     const matchSearch = !searchTerm || 
       item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       item.code.toLowerCase().includes(searchTerm.toLowerCase()) ||
       item.location.toLowerCase().includes(searchTerm.toLowerCase()) ||
       (item.specs && item.specs.toLowerCase().includes(searchTerm.toLowerCase()));
     
-    const matchCategory = selectedCategory === 'all' || item.category === selectedCategory;
+    // 2. Status filter
     const matchStatus = statusFilter === 'all' || item.status === statusFilter;
 
-    return matchSearch && matchCategory && matchStatus;
+    // 3. Tree node hierarchy filter
+    let matchTreeNode = true;
+    if (selectedNode.type === 'category' && selectedNode.categoryFilter) {
+      matchTreeNode = item.category === selectedNode.categoryFilter;
+    } else if (selectedNode.type === 'subcategory') {
+      const matchCat = !selectedNode.categoryFilter || item.category === selectedNode.categoryFilter;
+      if (!matchCat) {
+        matchTreeNode = false;
+      } else if (selectedNode.subFilterKeyword) {
+        const keywords = selectedNode.subFilterKeyword.toLowerCase().split(',');
+        const text = `${item.name} ${item.specs || ''} ${item.code}`.toLowerCase();
+        matchTreeNode = keywords.some(kw => text.includes(kw.trim()));
+      }
+    } else if (selectedNode.type === 'dashboard') {
+      if (selectedNode.dashboardSubView === 'critical') {
+        matchTreeNode = item.status === 'critical' || item.status === 'warning';
+      }
+    }
+
+    return matchSearch && matchStatus && matchTreeNode;
   });
+
+  // Calculate breadcrumbs path
+  const getBreadcrumbs = (node: WarehouseTreeNode, targetId: string, path: { id: string; name: string }[] = []): { id: string; name: string }[] | null => {
+    const currentPath = [...path, { id: node.id, name: node.name }];
+    if (node.id === targetId) return currentPath;
+    if (node.children) {
+      for (const child of node.children) {
+        const res = getBreadcrumbs(child, targetId, currentPath);
+        if (res) return res;
+      }
+    }
+    return null;
+  };
+
+  const breadcrumbs = getBreadcrumbs(treeData, selectedNode.id) || [{ id: selectedNode.id, name: selectedNode.name }];
 
   const handleCreateItemSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -168,6 +314,20 @@ export const WarehouseScreen: React.FC<WarehouseScreenProps> = ({
 
         <div className="flex flex-wrap items-center gap-2">
           <button
+            onClick={() => setShowTreeSidebar(!showTreeSidebar)}
+            className={`px-3 py-2 text-xs font-bold rounded-xl flex items-center gap-1.5 transition-colors cursor-pointer border ${
+              showTreeSidebar 
+                ? 'bg-[#005394] text-white border-[#005394]' 
+                : 'bg-[#f0f3ff] hover:bg-[#dee8ff] text-[#005394] border-transparent'
+            }`}
+            title="Bật/Tắt Cây thư mục kho"
+          >
+            <FolderTree size={15} />
+            <span className="hidden sm:inline">{showTreeSidebar ? 'Ẩn Cây danh mục' : 'Hiện Cây danh mục'}</span>
+            <span className="sm:hidden">Cây danh mục</span>
+          </button>
+
+          <button
             onClick={handleExportCSV}
             className="px-3 py-2 bg-[#f0f3ff] hover:bg-[#dee8ff] text-[#005394] text-xs font-bold rounded-xl flex items-center gap-1.5 transition-colors cursor-pointer"
             title="Xuất bảng kê Excel/CSV"
@@ -202,80 +362,288 @@ export const WarehouseScreen: React.FC<WarehouseScreenProps> = ({
         </div>
       </div>
 
-      {/* Filter & Category Toolbar */}
-      <div className="flex flex-col gap-3 bg-white p-4 rounded-2xl border border-[#e2eaf5] shadow-xs">
-        <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
-          {/* Search */}
-          <div className="relative flex-1">
-            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
-            <input
-              type="text"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Tìm kiếm theo mã, tên thiết bị, thông số, vị trí..."
-              className="w-full pl-10 pr-4 py-2 bg-[#f0f4fa] rounded-xl text-xs sm:text-sm text-gray-800 outline-none focus:bg-white focus:ring-2 focus:ring-[#005394]/20 border border-transparent focus:border-[#005394]"
+      {/* 4 Thư mục con của Quản lý kho: Dashboard | Danh mục VT/TB | Nhập xuất kho | Kiểm kê */}
+      <div className="flex items-center gap-2 overflow-x-auto pb-1">
+        <button
+          onClick={() => onSelectSubTab?.('dashboard')}
+          className={`px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition-all cursor-pointer ${
+            currentSubTab === 'dashboard'
+              ? 'bg-[#005394] text-white shadow-xs'
+              : 'bg-white text-gray-700 hover:bg-gray-100 border border-gray-200'
+          }`}
+        >
+          <LayoutDashboard size={14} />
+          <span>Dashboard Kho</span>
+        </button>
+
+        <button
+          onClick={() => onSelectSubTab?.('danh-muc')}
+          className={`px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition-all cursor-pointer ${
+            currentSubTab === 'danh-muc'
+              ? 'bg-[#005394] text-white shadow-xs'
+              : 'bg-white text-gray-700 hover:bg-gray-100 border border-gray-200'
+          }`}
+        >
+          <Boxes size={14} />
+          <span>Danh mục VT/TB</span>
+          <span className={`ml-1 text-[10px] px-1.5 py-0.2 rounded-full ${
+            currentSubTab === 'danh-muc' ? 'bg-white/20 text-white' : 'bg-blue-100 text-[#005394]'
+          }`}>
+            {inventory.length}
+          </span>
+        </button>
+
+        <button
+          onClick={() => onSelectSubTab?.('nhap-xuat')}
+          className={`px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition-all cursor-pointer ${
+            currentSubTab === 'nhap-xuat'
+              ? 'bg-[#005394] text-white shadow-xs'
+              : 'bg-white text-gray-700 hover:bg-gray-100 border border-gray-200'
+          }`}
+        >
+          <ArrowLeftRight size={14} />
+          <span>Nhập xuất kho</span>
+        </button>
+
+        <button
+          onClick={() => onSelectSubTab?.('kiem-ke')}
+          className={`px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition-all cursor-pointer ${
+            currentSubTab === 'kiem-ke'
+              ? 'bg-[#005394] text-white shadow-xs'
+              : 'bg-white text-gray-700 hover:bg-gray-100 border border-gray-200'
+          }`}
+        >
+          <ClipboardCheck size={14} />
+          <span>Kiểm kê & Định mức</span>
+          <span className={`ml-1 text-[10px] px-1.5 py-0.2 rounded-full ${
+            currentSubTab === 'kiem-ke' ? 'bg-white/20 text-white' : 'bg-amber-100 text-amber-800'
+          }`}>
+            {inventory.filter(i => i.status !== 'normal').length} cần chú ý
+          </span>
+        </button>
+      </div>
+
+      {/* Context Banner: Nhập xuất kho */}
+      {currentSubTab === 'nhap-xuat' && (
+        <div className="bg-gradient-to-r from-[#005394] to-[#003764] text-white p-4 sm:p-5 rounded-2xl shadow-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="px-2 py-0.5 rounded bg-white/20 text-white text-[10px] font-bold uppercase tracking-wider">
+                Thư mục con: Nhập xuất kho
+              </span>
+            </div>
+            <h3 className="text-base font-bold mt-1">Nghiệp vụ Nhập - Xuất - Điều chuyển vật tư</h3>
+            <p className="text-xs text-blue-100 mt-0.5">
+              Lập phiếu nhập kho từ nhà cung cấp, xuất kho phục vụ bảo dưỡng sửa chữa hoặc tra cứu lịch sử luân chuyển.
+            </p>
+          </div>
+          <div className="flex items-center gap-2 flex-wrap">
+            <button
+              onClick={() => onOpenNewTransaction('import')}
+              className="px-4 py-2 bg-white text-[#005394] hover:bg-blue-50 text-xs font-bold rounded-xl flex items-center gap-1.5 transition-colors cursor-pointer shadow-xs"
+            >
+              <ArrowDownLeft size={16} />
+              <span>Tạo phiếu Nhập</span>
+            </button>
+            <button
+              onClick={() => onOpenNewTransaction('export')}
+              className="px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-bold rounded-xl flex items-center gap-1.5 transition-colors cursor-pointer shadow-xs"
+            >
+              <ArrowUpRight size={16} />
+              <span>Tạo phiếu Xuất</span>
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Context Banner: Kiểm kê */}
+      {currentSubTab === 'kiem-ke' && (
+        <div className="bg-gradient-to-r from-amber-700 to-amber-900 text-white p-4 sm:p-5 rounded-2xl shadow-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="px-2 py-0.5 rounded bg-white/20 text-white text-[10px] font-bold uppercase tracking-wider">
+                Thư mục con: Kiểm kê & Đối soát
+              </span>
+            </div>
+            <h3 className="text-base font-bold mt-1">Kiểm kê định kỳ & Cảnh báo an toàn kho</h3>
+            <p className="text-xs text-amber-100 mt-0.5">
+              Đối soát số liệu thực tế tại các kho với định mức tối thiểu. Đang có {inventory.filter(i => i.status === 'critical').length} vật tư dưới ngưỡng tối thiểu.
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleExportCSV}
+              className="px-4 py-2 bg-white text-amber-900 hover:bg-amber-50 text-xs font-bold rounded-xl flex items-center gap-1.5 transition-colors cursor-pointer shadow-xs"
+            >
+              <FileSpreadsheet size={16} />
+              <span>Xuất biên bản kiểm kê</span>
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Main Responsive Layout: Tree View Sidebar (Left) + Main Content (Right) */}
+      <div className="flex flex-col lg:flex-row gap-5 items-start w-full">
+        {/* Tree View Folder Sidebar */}
+        {showTreeSidebar && (
+          <div className="w-full lg:w-72 xl:w-80 flex-shrink-0">
+            <WarehouseTreeView
+              treeData={treeData}
+              selectedNodeId={selectedNode.id}
+              inventory={inventory}
+              onSelectNode={handleSelectTreeNode}
+              onAddCustomFolder={handleAddCustomFolder}
             />
           </div>
+        )}
 
-          {/* Status Quick Pills */}
-          <div className="flex items-center gap-1.5 overflow-x-auto pb-1 md:pb-0 text-xs">
-            <button
-              onClick={() => setStatusFilter('all')}
-              className={`px-3 py-1.5 rounded-lg font-semibold transition-colors flex-shrink-0 cursor-pointer ${
-                statusFilter === 'all'
-                  ? 'bg-[#005394] text-white'
-                  : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
-              }`}
-            >
-              Tất cả ({inventory.length})
-            </button>
-            <button
-              onClick={() => setStatusFilter('critical')}
-              className={`px-3 py-1.5 rounded-lg font-semibold transition-colors flex-shrink-0 flex items-center gap-1 cursor-pointer ${
-                statusFilter === 'critical'
-                  ? 'bg-[#ba1a1a] text-white'
-                  : 'bg-red-50 hover:bg-red-100 text-red-700 border border-red-200'
-              }`}
-            >
-              <AlertTriangle size={13} />
-              <span>Khẩn cấp ({inventory.filter(i => i.status === 'critical').length})</span>
-            </button>
-            <button
-              onClick={() => setStatusFilter('warning')}
-              className={`px-3 py-1.5 rounded-lg font-semibold transition-colors flex-shrink-0 flex items-center gap-1 cursor-pointer ${
-                statusFilter === 'warning'
-                  ? 'bg-amber-600 text-white'
-                  : 'bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200'
-              }`}
-            >
-              <span>Cảnh báo tồn ({inventory.filter(i => i.status === 'warning').length})</span>
-            </button>
+        {/* Main Content Area */}
+        <div className="flex-1 min-w-0 w-full flex flex-col gap-4">
+          {/* Breadcrumb & Current Folder Bar */}
+          <div className="bg-white p-3.5 rounded-2xl border border-[#e2eaf5] shadow-xs flex flex-wrap items-center justify-between gap-3 text-xs">
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <span className="text-gray-400 flex items-center gap-1 font-semibold">
+                <FolderOpen size={14} className="text-[#005394]" />
+                <span>Thư mục:</span>
+              </span>
+              {breadcrumbs.map((crumb, idx) => {
+                const isLast = idx === breadcrumbs.length - 1;
+                return (
+                  <React.Fragment key={crumb.id}>
+                    {idx > 0 && <ChevronRight size={13} className="text-gray-400" />}
+                    <span className={`font-semibold ${isLast ? 'text-[#005394] font-bold bg-[#eef3fb] px-2 py-0.5 rounded-md' : 'text-gray-600'}`}>
+                      {crumb.name}
+                    </span>
+                  </React.Fragment>
+                );
+              })}
+            </div>
+
+            <div className="flex items-center gap-2">
+              {selectedNode.type === 'dashboard' ? (
+                <button
+                  onClick={() => {
+                    const allNode = treeData.children?.find(c => c.type === 'all') || treeData;
+                    handleSelectTreeNode(allNode);
+                  }}
+                  className="px-2.5 py-1 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold rounded-lg text-xs transition-colors cursor-pointer flex items-center gap-1"
+                >
+                  <Package size={13} />
+                  <span>Xem dạng Bảng vật tư</span>
+                </button>
+              ) : (
+                <>
+                  <span className="px-2 py-0.5 bg-[#eef3fb] text-[#005394] font-bold rounded-full text-[11px]">
+                    {filteredItems.length} vật tư phù hợp
+                  </span>
+                  <button
+                    onClick={() => {
+                      const dashNode = treeData.children?.find(c => c.type === 'dashboard');
+                      if (dashNode) handleSelectTreeNode(dashNode);
+                    }}
+                    className="px-2.5 py-1 bg-[#005394]/10 hover:bg-[#005394]/20 text-[#005394] font-bold rounded-lg text-xs transition-colors cursor-pointer flex items-center gap-1"
+                  >
+                    <LayoutDashboard size={13} />
+                    <span>Mở Dashboard Kho</span>
+                  </button>
+                </>
+              )}
+            </div>
           </div>
-        </div>
 
-        {/* Category Filter Chips */}
-        <div className="flex items-center gap-1.5 overflow-x-auto pt-2 border-t border-gray-100 text-xs">
-          <button
-            onClick={() => setSelectedCategory('all')}
-            className={`px-2.5 py-1 rounded-md text-[11px] font-medium transition-colors flex-shrink-0 cursor-pointer ${
-              selectedCategory === 'all' ? 'bg-[#d8e3fa] text-[#005394] font-bold' : 'text-gray-600 hover:bg-gray-100'
-            }`}
-          >
-            Tất cả danh mục
-          </button>
-          {categories.map((cat) => (
-            <button
-              key={cat}
-              onClick={() => setSelectedCategory(cat)}
-              className={`px-2.5 py-1 rounded-md text-[11px] font-medium transition-colors flex-shrink-0 cursor-pointer ${
-                selectedCategory === cat ? 'bg-[#d8e3fa] text-[#005394] font-bold' : 'text-gray-600 hover:bg-gray-100'
-              }`}
-            >
-              {cat}
-            </button>
-          ))}
-        </div>
-      </div>
+          {/* Conditional Display: Warehouse Dashboard View vs Inventory Table */}
+          {selectedNode.type === 'dashboard' ? (
+            <WarehouseDashboardView
+              inventory={inventory}
+              subView={selectedNode.dashboardSubView}
+              onSelectCategoryFolder={(categoryName) => {
+                const catNode = findNodeByCategory(treeData, categoryName);
+                if (catNode) {
+                  handleSelectTreeNode(catNode);
+                }
+              }}
+              onOpenNewTransaction={onOpenNewTransaction}
+              onViewAllItems={() => {
+                const allNode = treeData.children?.find(c => c.type === 'all') || treeData;
+                handleSelectTreeNode(allNode);
+              }}
+            />
+          ) : (
+            <>
+              {/* Filter & Category Toolbar */}
+              <div className="flex flex-col gap-3 bg-white p-4 rounded-2xl border border-[#e2eaf5] shadow-xs">
+                <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
+                  {/* Search */}
+                  <div className="relative flex-1">
+                    <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
+                    <input
+                      type="text"
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      placeholder={`Tìm kiếm trong ${selectedNode.name}...`}
+                      className="w-full pl-10 pr-4 py-2 bg-[#f0f4fa] rounded-xl text-xs sm:text-sm text-gray-800 outline-none focus:bg-white focus:ring-2 focus:ring-[#005394]/20 border border-transparent focus:border-[#005394]"
+                    />
+                  </div>
+
+                  {/* Status Quick Pills */}
+                  <div className="flex items-center gap-1.5 overflow-x-auto pb-1 md:pb-0 text-xs">
+                    <button
+                      onClick={() => setStatusFilter('all')}
+                      className={`px-3 py-1.5 rounded-lg font-semibold transition-colors flex-shrink-0 cursor-pointer ${
+                        statusFilter === 'all'
+                          ? 'bg-[#005394] text-white'
+                          : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
+                      }`}
+                    >
+                      Tất cả ({inventory.length})
+                    </button>
+                    <button
+                      onClick={() => setStatusFilter('critical')}
+                      className={`px-3 py-1.5 rounded-lg font-semibold transition-colors flex-shrink-0 flex items-center gap-1 cursor-pointer ${
+                        statusFilter === 'critical'
+                          ? 'bg-[#ba1a1a] text-white'
+                          : 'bg-red-50 hover:bg-red-100 text-red-700 border border-red-200'
+                      }`}
+                    >
+                      <AlertTriangle size={13} />
+                      <span>Khẩn cấp ({inventory.filter(i => i.status === 'critical').length})</span>
+                    </button>
+                    <button
+                      onClick={() => setStatusFilter('warning')}
+                      className={`px-3 py-1.5 rounded-lg font-semibold transition-colors flex-shrink-0 flex items-center gap-1 cursor-pointer ${
+                        statusFilter === 'warning'
+                          ? 'bg-amber-600 text-white'
+                          : 'bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200'
+                      }`}
+                    >
+                      <span>Cảnh báo tồn ({inventory.filter(i => i.status === 'warning').length})</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Category Filter Chips */}
+                <div className="flex items-center gap-1.5 overflow-x-auto pt-2 border-t border-gray-100 text-xs">
+                  <button
+                    onClick={() => handleSelectCategoryFromChips('all')}
+                    className={`px-2.5 py-1 rounded-md text-[11px] font-medium transition-colors flex-shrink-0 cursor-pointer ${
+                      selectedCategory === 'all' ? 'bg-[#d8e3fa] text-[#005394] font-bold' : 'text-gray-600 hover:bg-gray-100'
+                    }`}
+                  >
+                    Tất cả danh mục
+                  </button>
+                  {categories.map((cat) => (
+                    <button
+                      key={cat}
+                      onClick={() => handleSelectCategoryFromChips(cat)}
+                      className={`px-2.5 py-1 rounded-md text-[11px] font-medium transition-colors flex-shrink-0 cursor-pointer ${
+                        selectedCategory === cat ? 'bg-[#d8e3fa] text-[#005394] font-bold' : 'text-gray-600 hover:bg-gray-100'
+                      }`}
+                    >
+                      {cat}
+                    </button>
+                  ))}
+                </div>
+              </div>
 
       {/* Main Inventory Table */}
       <div className="bg-white rounded-2xl shadow-xs border border-[#e2eaf5] overflow-hidden">
@@ -414,6 +782,10 @@ export const WarehouseScreen: React.FC<WarehouseScreenProps> = ({
               )}
             </tbody>
           </table>
+        </div>
+      </div>
+            </>
+          )}
         </div>
       </div>
 
