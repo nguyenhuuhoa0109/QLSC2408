@@ -6,74 +6,77 @@ interface LogoProps {
   showSubtitle?: boolean;
   layout?: 'stacked' | 'horizontal';
   lightText?: boolean;
+  onClick?: () => void;
 }
 
 export const DatPhuongLogo: React.FC<LogoProps> = ({ 
   className = '', 
   size = 'md',
-  showSubtitle = true,
-  layout = 'stacked',
-  lightText = false
+  lightText = false,
+  onClick
 }) => {
-  const textColor = lightText ? 'text-white' : 'text-[#004e79]';
-  const subtitleColor = lightText ? 'text-white/80' : 'text-[#004e79]';
-
-  const fontSizes = {
-    xs: { text: 'text-sm font-extrabold', sub: 'text-[7px]', svg: 'w-3 h-3 -mt-1' },
-    sm: { text: 'text-base font-black', sub: 'text-[8px]', svg: 'w-3.5 h-3.5 -mt-1' },
-    md: { text: 'text-xl sm:text-2xl font-black', sub: 'text-[9px] sm:text-[10px]', svg: 'w-4 h-4 sm:w-5 sm:h-5 -mt-1.5' },
-    lg: { text: 'text-2xl sm:text-3xl font-black', sub: 'text-[11px] sm:text-[12px]', svg: 'w-5 h-5 sm:w-6 sm:h-6 -mt-2' },
-    xl: { text: 'text-3xl sm:text-4xl font-black', sub: 'text-[13px] sm:text-[14px]', svg: 'w-7 h-7 sm:w-8 sm:h-8 -mt-2.5' },
+  // Height & maximum width matching various UI placements
+  const sizeClasses = {
+    xs: 'h-6 max-h-6 max-w-[120px]',
+    sm: 'h-8 max-h-8 max-w-[160px]',
+    md: 'h-10 sm:h-12 max-w-[220px]',
+    lg: 'h-13 sm:h-15 max-w-[260px]',
+    xl: 'h-16 sm:h-20 max-w-[320px]',
   }[size];
 
-  return (
-    <div className={`flex select-none ${layout === 'horizontal' ? 'flex-row items-center gap-3' : 'flex-col items-center'} ${className}`}>
-      {/* Brand Main Text: DATPHUONG with wing logo above the G */}
-      <div className="flex items-center">
-        <span className={`tracking-tight ${textColor} ${fontSizes.text} font-sans uppercase`}>
-          DATPHUON
-        </span>
-        
-        {/* The 'G' letter with stylized double curve/wings above it */}
-        <div className="relative inline-flex items-center">
-          <span className={`tracking-tight ${textColor} ${fontSizes.text} font-sans uppercase`}>
-            G
-          </span>
-          {/* Stylized Red and Blue Wings matching the official logo.png */}
-          <div className={`absolute -top-2.5 -right-3 sm:-right-4 ${fontSizes.svg} pointer-events-none`}>
-            <svg
-              viewBox="0 0 40 28"
-              fill="none"
-              xmlns="http://www.w3.org/2000/svg"
-              className="w-full h-full drop-shadow-2xs"
-            >
-              {/* Upper Red Wing Curve */}
-              <path
-                d="M4 22C10 9 24 4 36 6C28 11 18 16 4 22Z"
-                fill="#D9251D"
-              />
-              {/* Lower Dark Blue Wing Curve */}
-              <path
-                d="M11 25C17 17 28 15 37 17C30 22 21 24 11 25Z"
-                fill="#004E79"
-              />
-            </svg>
-          </div>
-          {/* Registered symbol */}
-          <span className={`text-[8px] font-bold ${textColor} ml-2.5 sm:ml-3 self-start -mt-0.5`}>
-            ®
-          </span>
-        </div>
-      </div>
+  const brandColor = lightText ? '#FFFFFF' : '#004E79';
+  const redWingColor = '#D9251D';
 
-      {/* Subtitle: SON TRA ENERGY */}
-      {showSubtitle && (
-        <span 
-          className={`uppercase font-bold tracking-[0.25em] ${subtitleColor} ${fontSizes.sub} mt-0.5 whitespace-nowrap`}
+  return (
+    <div 
+      className={`inline-flex items-center justify-center select-none ${className}`}
+      onClick={onClick}
+    >
+      <svg 
+        viewBox="0 0 305 107"
+        preserveAspectRatio="xMidYMid meet"
+        className={`w-auto ${sizeClasses} transition-transform duration-200`}
+      >
+        <g 
+          transform="translate(0.000000,107.000000) scale(0.100000,-0.100000)"
+          fill={brandColor} 
+          stroke="none"
         >
-          SON TRA ENERGY
-        </span>
-      )}
+          {/* Top Wing - Red */}
+          <path 
+            d="M2695 830 c47 -48 50 -49 68 -32 58 53 38 82 -57 82 l-60 0 49 -50z" 
+            fill={redWingColor}
+          />
+          {/* Bottom Wing - Teal */}
+          <path 
+            d="M2826 821 c-8 -15 -52 -62 -96 -104 l-82 -77 85 0 c93 0 123 14 152 70 19 37 19 54 -1 95 -21 45 -41 51 -58 16z" 
+            fill={brandColor}
+          />
+          {/* DATPHUONG letters and SON TRA ENERGY */}
+          <path d="M198 683 l-38 -4 0 -129 0 -128 63 -7 c76 -8 141 7 161 38 38 58 27 183 -19 213 -25 16 -105 25 -167 17z m108 -57 c28 -21 28 -131 -1 -152 -11 -8 -29 -13 -40 -12 -18 3 -20 12 -23 77 -2 41 -1 80 2 88 7 17 37 17 62 -1z"/>
+          <path d="M1850 673 c-44 -23 -64 -76 -56 -148 10 -88 54 -121 150 -111 31 4 58 13 72 27 44 41 41 181 -5 223 -29 26 -118 31 -161 9z m98 -49 c18 -13 22 -24 22 -74 0 -52 -3 -62 -24 -75 -19 -13 -29 -14 -45 -6 -38 21 -40 139 -3 160 23 14 24 13 50 -5z"/>
+          <path d="M2485 685 c-5 -2 -22 -6 -37 -9 -38 -9 -58 -52 -58 -126 0 -66 19 -116 47 -124 51 -14 89 -17 133 -11 l50 7 0 96 0 96 -39 -38 c-30 -29 -41 -49 -43 -75 -3 -32 -6 -36 -28 -33 -33 3 -40 18 -40 82 0 69 8 81 55 85 35 3 75 28 75 47 0 7 -93 10 -115 3z"/>
+          <path d="M505 668 c-24 -64 -75 -225 -75 -236 0 -9 11 -12 38 -10 30 2 38 7 40 26 3 21 8 23 55 20 45 -3 52 -6 55 -25 3 -20 10 -23 43 -23 37 0 40 2 34 23 -4 12 -23 70 -42 130 l-34 107 -55 0 c-35 0 -56 -5 -59 -12z m84 -131 c1 -14 -5 -18 -26 -15 -23 2 -27 7 -25 27 2 14 8 36 14 50 l10 26 13 -35 c8 -19 14 -43 14 -53z"/>
+          <path d="M680 655 c0 -22 4 -25 40 -25 l40 0 0 -105 0 -105 35 0 35 0 0 105 0 105 40 0 c36 0 40 3 40 25 l0 25 -115 0 -115 0 0 -25z"/>
+          <path d="M952 553 l3 -128 38 -3 37 -3 0 105 c0 105 0 106 24 106 64 0 74 -38 25 -95 -35 -40 -25 -44 38 -16 46 21 63 45 63 90 0 52 -37 71 -142 71 l-89 0 3 -127z"/>
+          <path d="M1230 550 l0 -130 34 0 35 0 3 53 3 52 40 0 40 0 3 -52 3 -53 40 0 39 0 0 130 0 130 -39 0 -40 0 -3 -52 -3 -53 -40 0 -40 0 -3 53 -3 52 -35 0 -34 0 0 -130z"/>
+          <path d="M1510 586 c0 -52 4 -106 10 -121 23 -60 161 -74 207 -21 21 25 23 37 23 132 l0 104 -35 0 -35 0 0 -90 c0 -77 -3 -93 -20 -110 -24 -24 -30 -24 -56 -6 -16 12 -19 28 -21 108 l-2 93 -36 3 -35 3 0 -95z"/>
+          <path d="M2097 674 c-4 -4 -7 -63 -7 -131 l0 -123 35 0 34 0 3 83 3 82 48 -82 c48 -81 50 -83 88 -83 l39 0 0 130 0 130 -35 0 -34 0 5 -87 c5 -98 8 -98 -59 12 -38 63 -46 70 -78 73 -19 2 -38 0 -42 -4z"/>
+          <path d="M674 276 c-11 -29 1 -51 30 -56 16 -3 31 -10 33 -17 4 -12 -27 -26 -45 -21 -5 2 -12 -1 -13 -7 -6 -15 37 -18 61 -5 38 20 21 57 -34 74 -26 9 -3 36 24 29 11 -3 20 0 20 6 0 17 -70 14 -76 -3z"/>
+          <path d="M792 278 c-17 -17 -15 -84 4 -102 20 -20 58 -20 78 0 18 18 21 66 6 95 -12 22 -68 27 -88 7z m72 -34 c6 -22 -7 -64 -20 -64 -3 0 -14 5 -25 10 -23 13 -25 53 -4 74 20 20 42 11 49 -20z"/>
+          <path d="M912 228 c3 -69 20 -81 28 -21 l5 38 29 -42 c16 -24 33 -43 37 -43 5 0 9 29 9 65 0 53 -3 65 -16 65 -13 0 -15 -8 -12 -35 2 -19 1 -35 -3 -35 -4 0 -17 16 -29 35 -35 56 -52 47 -48 -27z"/>
+          <path d="M1085 280 c3 -5 13 -10 21 -10 10 0 14 -14 14 -56 0 -40 3 -54 13 -51 7 2 12 23 13 53 1 37 5 50 17 52 37 7 14 22 -34 22 -31 0 -48 -4 -44 -10z"/>
+          <path d="M1200 225 c0 -49 3 -66 13 -62 6 2 11 14 9 25 -4 30 18 28 43 -5 l22 -26 -1 64 -1 64 -42 3 -43 3 0 -66z m70 30 c0 -9 -7 -18 -16 -22 -18 -7 -39 11 -30 26 11 17 46 13 46 -4z"/>
+          <path d="M1331 228 c-21 -63 -20 -87 3 -55 16 21 66 23 66 2 0 -8 5 -15 10 -15 14 0 13 15 -7 77 -23 74 -45 72 -72 -9z m49 7 c0 -16 -6 -25 -16 -25 -11 0 -14 5 -10 16 3 9 6 20 6 25 0 5 5 9 10 9 6 0 10 -11 10 -25z"/>
+          <path d="M1502 228 l3 -63 38 -3 c28 -2 37 0 37 12 0 11 -9 16 -30 16 -20 0 -30 5 -30 15 0 9 9 15 25 15 14 0 25 5 25 10 0 6 -11 10 -25 10 -16 0 -25 6 -25 15 0 10 10 15 30 15 17 0 30 5 30 10 0 6 -18 10 -40 10 l-41 0 3 -62z"/>
+          <path d="M1610 225 c0 -37 4 -65 10 -65 6 0 10 18 10 40 0 22 3 40 8 40 4 0 18 -18 32 -40 14 -22 28 -40 32 -40 5 0 8 29 8 65 0 72 -17 90 -22 23 l-3 -42 -29 42 c-16 23 -33 42 -37 42 -5 0 -9 -29 -9 -65z"/>
+          <path d="M1744 276 c-3 -7 -4 -35 -2 -62 l3 -49 38 0 c46 0 54 19 9 23 -39 4 -38 25 1 30 33 4 26 22 -9 22 -15 0 -24 6 -24 15 0 10 10 15 30 15 17 0 30 5 30 10 0 16 -70 12 -76 -4z"/>
+          <path d="M1850 226 c0 -37 4 -66 10 -66 6 0 10 11 10 25 0 16 6 25 15 25 9 0 20 -11 25 -25 5 -14 14 -25 20 -25 13 0 13 6 -1 31 -7 15 -7 24 1 34 6 8 10 24 8 37 -2 19 -10 23 -45 26 l-43 3 0 -65z m65 24 c0 -8 -10 -16 -22 -18 -18 -3 -23 2 -23 18 0 16 5 21 23 18 12 -2 22 -10 22 -18z"/>
+          <path d="M1970 271 c-28 -53 -1 -106 54 -106 35 0 36 1 36 38 0 29 -4 37 -18 37 -28 0 -34 -11 -14 -26 14 -11 15 -15 3 -23 -25 -16 -41 -1 -41 40 0 39 5 43 42 40 9 -1 19 3 23 9 4 6 -9 10 -34 10 -30 0 -43 -5 -51 -19z"/>
+          <path d="M2100 250 c11 -21 20 -51 20 -65 0 -41 21 -25 35 26 7 24 15 52 20 62 13 31 -11 18 -26 -15 l-15 -31 -13 31 c-8 18 -20 32 -27 32 -11 0 -10 -9 6 -40z"/>
+        </g>
+      </svg>
     </div>
   );
 };
+
