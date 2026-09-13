@@ -19,6 +19,7 @@ import {
   History
 } from 'lucide-react';
 import { NavigationTab, User, WarehouseSubTab, MaintenanceSubTab } from '../types';
+import { DatPhuongLogo } from './DatPhuongLogo';
 
 interface SidebarProps {
   currentTab: NavigationTab;
@@ -145,38 +146,15 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
   return (
     <aside className="fixed left-0 top-0 h-full w-72 bg-white z-50 flex flex-col shadow-[1px_0_12px_rgba(0,0,0,0.03)] border-r border-[#c1c7d2]/30 select-none">
-      {/* User / Plant Info Header */}
-      <div className="p-4 sm:p-5 flex items-center gap-3 border-b border-gray-100/80 mb-2">
-        <div className="w-11 h-11 bg-[#005394] rounded-xl flex items-center justify-center text-white shadow-xs overflow-hidden flex-shrink-0 border border-blue-200">
-          {user?.avatarUrl ? (
-            <img 
-              src={user.avatarUrl} 
-              alt={user.name} 
-              className="w-full h-full object-cover" 
-              referrerPolicy="no-referrer"
-            />
-          ) : (
-            <span className="font-bold text-sm text-white">
-              {user?.initials || 'DP'}
-            </span>
-          )}
-        </div>
-        <div className="min-w-0 flex-1">
-          <div className="text-sm font-bold text-[#005394] leading-tight truncate">
-            HỆ THỐNG QUẢN LÝ NỘI BỘ
-          </div>
-          <div className="flex items-center gap-1.5 mt-0.5">
-            <span className={`px-1.5 py-0.2 rounded text-[9px] font-black uppercase tracking-wider ${
-              isAdmin 
-                ? 'bg-purple-100 text-purple-800 border border-purple-200' 
-                : 'bg-blue-100 text-[#005394] border border-blue-200'
-            }`}>
-              {isAdmin ? 'ADMIN' : 'USER'}
-            </span>
-            <span className="text-[10px] text-gray-500 truncate">
-              {user?.department || 'Kỹ thuật'}
-            </span>
-          </div>
+      {/* Logo & Plant Title Header */}
+      <div className="p-4 sm:p-5 flex flex-col items-center justify-center border-b border-gray-100/80 mb-2 text-center bg-gradient-to-b from-blue-50/40 via-transparent to-transparent">
+        <DatPhuongLogo 
+          size="md" 
+          className="cursor-pointer hover:opacity-90 transition-opacity" 
+          onClick={() => onSelectTab('tong-quan')} 
+        />
+        <div className="mt-2 text-xs font-bold text-[#005394] tracking-wide uppercase leading-snug">
+          Nhà máy thủy điện Sơn Trà 1
         </div>
       </div>
 
@@ -195,9 +173,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
           <span className="text-sm">Trang chủ</span>
         </button>
 
-        {/* Section Header: QUẢN LÝ NGHIỆP VỤ */}
+        {/* Section Header: HỆ THỐNG QUẢN LÝ NỘI BỘ */}
         <div className="pt-5 pb-1 px-4 text-[11px] font-bold uppercase tracking-wider text-[#727782]">
-          QUẢN LÝ NGHIỆP VỤ
+          HỆ THỐNG QUẢN LÝ NỘI BỘ
         </div>
 
         {/* QUẢN LÝ KHO (CHA) VỚI 4 THƯ MỤC CON XỔ RA */}

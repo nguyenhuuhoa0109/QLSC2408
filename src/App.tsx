@@ -367,6 +367,7 @@ export default function App() {
               onOpenDatabaseStatus={() => setShowDatabaseModal(true)}
               isMobilePreview={isMobilePreview}
               onToggleMobilePreview={() => setIsMobilePreview(!isMobilePreview)}
+              currentTab={currentTab}
               onSelectTab={setCurrentTab}
             />
 
@@ -421,6 +422,7 @@ export default function App() {
               onOpenDatabaseStatus={() => setShowDatabaseModal(true)}
               isMobilePreview={isMobilePreview}
               onToggleMobilePreview={() => setIsMobilePreview(!isMobilePreview)}
+              currentTab={currentTab}
               onSelectTab={setCurrentTab}
             />
 

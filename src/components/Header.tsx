@@ -16,10 +16,14 @@ import {
   ShieldCheck,
   Calendar,
   Sparkles,
-  User as UserIcon
+  User as UserIcon,
+  Home,
+  Package,
+  Wrench,
+  FileText,
+  BarChart3
 } from 'lucide-react';
 import { User, PlantLocation, NavigationTab } from '../types';
-import { DatPhuongLogo } from './DatPhuongLogo';
 
 interface HeaderProps {
   user: User;
@@ -34,6 +38,7 @@ interface HeaderProps {
   onOpenDatabaseStatus: () => void;
   isMobilePreview: boolean;
   onToggleMobilePreview: () => void;
+  currentTab?: NavigationTab;
   onSelectTab?: (tab: NavigationTab) => void;
 }
 
@@ -50,6 +55,7 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenDatabaseStatus,
   isMobilePreview,
   onToggleMobilePreview,
+  currentTab = 'tong-quan',
   onSelectTab
 }) => {
   const [showNotifications, setShowNotifications] = useState(false);
@@ -57,6 +63,15 @@ export const Header: React.FC<HeaderProps> = ({
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showMobileSearch, setShowMobileSearch] = useState(false);
   const [showPlantDropdown, setShowPlantDropdown] = useState(false);
+
+  // Navigation Menu Items for Header
+  const navMenuItems: Array<{ id: NavigationTab; label: string; icon: React.ElementType }> = [
+    { id: 'tong-quan', label: 'Trang chủ', icon: Home },
+    { id: 'quan-ly-kho', label: 'Quản lý kho', icon: Package },
+    { id: 'quan-ly-sua-chua', label: 'Quản lý sửa chữa', icon: Wrench },
+    { id: 'quan-ly-tai-lieu', label: 'Quản lý tài liệu', icon: FileText },
+    { id: 'bao-cao', label: 'Báo cáo', icon: BarChart3 },
+  ];
 
   // Check if role is Admin or User
   const isAdmin = 
@@ -106,31 +121,28 @@ export const Header: React.FC<HeaderProps> = ({
     <div className="flex flex-col w-full sticky top-0 z-40">
       {/* 1. TOP MAIN HEADER */}
       <header className="h-16 bg-[#e7eeff]/95 backdrop-blur-md border-b border-[#c1c7d2]/30 flex items-center justify-between px-4 sm:px-6 shadow-2xs">
-        {/* Left Section: Logo & Plant Selector */}
+        {/* Left Section: Plant Selector & Navigation Menu */}
         <div className="flex items-center gap-3 sm:gap-6 flex-1 min-w-0">
           
-          {/* Official DAT PHUONG Logo */}
-          <div className="flex items-center py-1 pr-3 border-r border-blue-200/80">
-            <DatPhuongLogo size="sm" showSubtitle={false} className="hidden xs:flex" />
-            <DatPhuongLogo size="xs" showSubtitle={false} className="flex xs:hidden" />
-          </div>
-
           {/* Plant Selector */}
-          <div className="relative">
+          <div className="relative flex-shrink-0">
             <button
               onClick={() => setShowPlantDropdown(!showPlantDropdown)}
-              className="flex items-center gap-1.5 text-left group cursor-pointer focus:outline-none"
+              className="flex items-center gap-2 text-left group cursor-pointer focus:outline-none p-1.5 rounded-xl hover:bg-white/80 transition-colors"
               title="Nhấp để đổi nhà máy"
             >
-              <div className="flex flex-col">
-                <span className="text-[10px] uppercase font-bold text-[#005394] tracking-wider hidden sm:block">
-                  ĐẠT PHƯƠNG NĂNG LƯỢNG
+              <div className="w-8 h-8 rounded-lg bg-[#005394] text-white flex items-center justify-center shadow-xs">
+                <Building2 size={16} />
+              </div>
+              <div className="flex flex-col hidden sm:flex">
+                <span className="text-[9px] uppercase font-bold text-[#005394] tracking-wider">
+                  ĐẠT PHƯƠNG
                 </span>
                 <div className="flex items-center gap-1">
-                  <h1 className="text-sm sm:text-base font-bold text-[#111c2c] tracking-tight group-hover:text-[#005394] transition-colors truncate max-w-[180px] sm:max-w-none">
+                  <h1 className="text-xs sm:text-sm font-bold text-[#111c2c] tracking-tight group-hover:text-[#005394] transition-colors truncate max-w-[130px] lg:max-w-[160px]">
                     {currentPlant}
                   </h1>
-                  <ChevronDown size={14} className="text-[#727782] group-hover:text-[#005394] transition-transform flex-shrink-0" />
+                  <ChevronDown size={12} className="text-[#727782] group-hover:text-[#005394] transition-transform flex-shrink-0" />
                 </div>
               </div>
             </button>
@@ -185,25 +197,28 @@ export const Header: React.FC<HeaderProps> = ({
             )}
           </div>
 
-          {/* Search Input (Desktop) */}
-          <div className="hidden lg:flex relative w-64 xl:w-80 ml-2">
-            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#727782]" size={16} />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => onSearchChange(e.target.value)}
-              placeholder="Tìm kiếm vật tư, sửa chữa, tài liệu..."
-              className="w-full bg-[#d8e3fa] border-none rounded-full pl-9 pr-4 py-1.5 text-xs text-[#111c2c] placeholder:text-[#636c7a] focus:ring-2 focus:ring-[#005394]/30 focus:bg-white transition-all outline-none"
-            />
-            {searchQuery && (
-              <button
-                onClick={() => onSearchChange('')}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-              >
-                <X size={14} />
-              </button>
-            )}
-          </div>
+          {/* Thanh điều hướng menu */}
+          <nav className="flex items-center gap-1 overflow-x-auto py-1 max-w-full scrollbar-none">
+            {navMenuItems.map((item) => {
+              const Icon = item.icon;
+              const isActive = currentTab === item.id;
+              return (
+                <button
+                  key={item.id}
+                  onClick={() => onSelectTab && onSelectTab(item.id)}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
+                    isActive
+                      ? 'bg-[#005394] text-white font-bold shadow-xs'
+                      : 'text-[#414750] hover:text-[#005394] hover:bg-white/80'
+                  }`}
+                  title={item.label}
+                >
+                  <Icon size={14} className={isActive ? 'text-white' : 'text-[#005394]'} />
+                  <span className="hidden sm:inline">{item.label}</span>
+                </button>
+              );
+            })}
+          </nav>
         </div>
 
         {/* Right Action Icons & User profile */}
@@ -440,35 +455,6 @@ export const Header: React.FC<HeaderProps> = ({
           </div>
         </div>
       </header>
-
-      {/* 2. GREETING & DATE-TIME BANNER DIRECTLY UNDER HEADER */}
-      <div className="bg-gradient-to-r from-[#003e73] via-[#005394] to-[#003866] text-white px-4 sm:px-6 py-2.5 flex flex-wrap items-center justify-between gap-2 shadow-xs select-none">
-        {/* Left: Greeting with User Name & Role */}
-        <div className="flex items-center gap-2 sm:gap-3">
-          <div className="w-6 h-6 rounded-full bg-white/15 flex items-center justify-center text-sky-200">
-            <Sparkles size={13} />
-          </div>
-          <div className="flex items-center gap-2 flex-wrap text-xs sm:text-sm">
-            <span className="font-semibold text-white/90">Xin chào,</span>
-            <span className="font-extrabold text-white text-sm sm:text-base tracking-tight">{user.name}</span>
-            <span className={`px-2 py-0.2 rounded-full text-[10px] font-black uppercase tracking-wider ${
-              isAdmin 
-                ? 'bg-amber-400 text-slate-900 shadow-2xs font-extrabold' 
-                : 'bg-white/20 text-sky-100 border border-white/25'
-            }`}>
-              {roleDisplay}
-            </span>
-          </div>
-        </div>
-
-        {/* Right: Date, Month, Year & Plant Location */}
-        <div className="flex items-center gap-3 text-xs text-sky-100/90 font-medium">
-          <div className="flex items-center gap-1.5 bg-black/20 backdrop-blur-xs px-3 py-1 rounded-full border border-white/10">
-            <Calendar size={13} className="text-sky-300" />
-            <span className="font-mono text-[11px] sm:text-xs">{getFormattedDate()}</span>
-          </div>
-        </div>
-      </div>
 
       {/* Mobile Search Overlay Bar */}
       {showMobileSearch && (
