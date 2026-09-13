@@ -75,8 +75,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentTab, onSelectTab, plant
         </div>
         <div className="min-w-0 flex-1">
           <div className="text-sm font-bold text-[#005394] leading-tight truncate">
-            {user?.name || (plantName.includes('Sơn Trà') ? 'Sơn Trà 1' : 'Hòa Bình')}
-          </div>
+  HỆ THỐNG QUẢN LÝ NỘI BỘ
+</div>
           <div className="flex items-center gap-1.5 mt-0.5">
             <span className={`px-1.5 py-0.2 rounded text-[9px] font-black uppercase tracking-wider ${
               isAdmin 
