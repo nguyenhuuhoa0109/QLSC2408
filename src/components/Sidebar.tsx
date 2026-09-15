@@ -173,13 +173,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
           <span className="text-sm">Trang chủ</span>
         </button>
 
-        {/* Section Header: HỆ THỐNG QUẢN LÝ NỘI BỘ */}
-        <div className="pt-5 pb-1 px-4 text-[11px] font-bold uppercase tracking-wider text-[#727782]">
-          HỆ THỐNG QUẢN LÝ NỘI BỘ
-        </div>
-
         {/* QUẢN LÝ KHO (CHA) VỚI 4 THƯ MỤC CON XỔ RA */}
-        <div className="flex flex-col">
+        <div className="flex flex-col pt-2">
           <div
             onClick={() => {
               onSelectTab('quan-ly-kho', currentWarehouseSubTab);
@@ -409,7 +404,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           <Building2 size={13} className="text-[#005394]" />
           <span className="truncate">{plantName}</span>
         </div>
-        <p className="text-[10px] text-gray-400 mt-0.5 font-mono">Phiên bản v2.4.0 • Enterprise</p>
+        <p className="text-[11px] text-gray-500 mt-1 font-medium">Hệ thống quản lý nội bộ</p>
       </div>
     </aside>
   );

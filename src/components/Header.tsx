@@ -4,31 +4,21 @@ import {
   Bell, 
   Settings, 
   LogOut, 
-  Building2, 
   CheckCircle, 
   AlertTriangle, 
   Clock, 
-  Smartphone, 
-  Monitor, 
-  ChevronDown,
   X,
   Database,
   ShieldCheck,
-  Calendar,
-  Sparkles,
-  User as UserIcon,
   Home,
-  Package,
-  Wrench,
-  FileText,
-  BarChart3
+  ChevronRight
 } from 'lucide-react';
-import { User, PlantLocation, NavigationTab } from '../types';
+import { User, PlantLocation, NavigationTab, WarehouseSubTab, MaintenanceSubTab } from '../types';
 
 interface HeaderProps {
   user: User;
-  currentPlant: PlantLocation;
-  onPlantChange: (plant: PlantLocation) => void;
+  currentPlant?: PlantLocation;
+  onPlantChange?: (plant: PlantLocation) => void;
   onLogout: () => void;
   searchQuery: string;
   onSearchChange: (q: string) => void;
@@ -36,16 +26,18 @@ interface HeaderProps {
   unreadNotificationsCount: number;
   onOpenApprovals: () => void;
   onOpenDatabaseStatus: () => void;
-  isMobilePreview: boolean;
-  onToggleMobilePreview: () => void;
+  isMobilePreview?: boolean;
+  onToggleMobilePreview?: () => void;
   currentTab?: NavigationTab;
   onSelectTab?: (tab: NavigationTab) => void;
+  warehouseSubTab?: WarehouseSubTab;
+  onSelectWarehouseSubTab?: (subTab: WarehouseSubTab) => void;
+  maintenanceSubTab?: MaintenanceSubTab;
+  onSelectMaintenanceSubTab?: (subTab: MaintenanceSubTab) => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
   user,
-  currentPlant,
-  onPlantChange,
   onLogout,
   searchQuery,
   onSearchChange,
@@ -53,25 +45,146 @@ export const Header: React.FC<HeaderProps> = ({
   unreadNotificationsCount,
   onOpenApprovals,
   onOpenDatabaseStatus,
-  isMobilePreview,
-  onToggleMobilePreview,
   currentTab = 'tong-quan',
-  onSelectTab
+  onSelectTab,
+  warehouseSubTab = 'dashboard',
+  onSelectWarehouseSubTab,
+  maintenanceSubTab = 'dashboard',
+  onSelectMaintenanceSubTab
 }) => {
   const [showNotifications, setShowNotifications] = useState(false);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showMobileSearch, setShowMobileSearch] = useState(false);
-  const [showPlantDropdown, setShowPlantDropdown] = useState(false);
 
-  // Navigation Menu Items for Header
-  const navMenuItems: Array<{ id: NavigationTab; label: string; icon: React.ElementType }> = [
-    { id: 'tong-quan', label: 'Trang chủ', icon: Home },
-    { id: 'quan-ly-kho', label: 'Quản lý kho', icon: Package },
-    { id: 'quan-ly-sua-chua', label: 'Quản lý sửa chữa', icon: Wrench },
-    { id: 'quan-ly-tai-lieu', label: 'Quản lý tài liệu', icon: FileText },
-    { id: 'bao-cao', label: 'Báo cáo', icon: BarChart3 },
-  ];
+  // Dynamic hierarchical Breadcrumb construction
+  interface BreadcrumbItem {
+    id: string;
+    label: string;
+    icon?: React.ElementType;
+    onClick?: () => void;
+    isActive: boolean;
+  }
+
+  const getBreadcrumbs = (): BreadcrumbItem[] => {
+    // 1. Trang chủ is always the root item
+    if (currentTab === 'tong-quan') {
+      return [
+        {
+          id: 'home',
+          label: 'Trang chủ',
+          icon: Home,
+          onClick: () => onSelectTab && onSelectTab('tong-quan'),
+          isActive: true,
+        }
+      ];
+    }
+
+    const items: BreadcrumbItem[] = [
+      {
+        id: 'home',
+        label: 'Trang chủ',
+        icon: Home,
+        onClick: () => onSelectTab && onSelectTab('tong-quan'),
+        isActive: false,
+      }
+    ];
+
+    if (currentTab === 'quan-ly-kho') {
+      // Danh mục chính
+      items.push({
+        id: 'quan-ly-kho',
+        label: 'Quản lý kho',
+        onClick: () => {
+          onSelectTab && onSelectTab('quan-ly-kho');
+          onSelectWarehouseSubTab && onSelectWarehouseSubTab('dashboard');
+        },
+        isActive: false,
+      });
+
+      // Thư mục/Trang con hiện tại
+      const subTabMap: Record<WarehouseSubTab, string> = {
+        'dashboard': 'Dashboard',
+        'danh-muc': 'Danh mục VT/TB',
+        'nhap-xuat': 'Nhập xuất kho',
+        'kiem-ke': 'Kiểm kê',
+      };
+      const subLabel = subTabMap[warehouseSubTab] || 'Dashboard';
+      items.push({
+        id: `wh-${warehouseSubTab}`,
+        label: subLabel,
+        onClick: () => onSelectWarehouseSubTab && onSelectWarehouseSubTab(warehouseSubTab),
+        isActive: true,
+      });
+    } else if (currentTab === 'quan-ly-sua-chua') {
+      // Danh mục chính
+      items.push({
+        id: 'quan-ly-sua-chua',
+        label: 'Quản lý sửa chữa',
+        onClick: () => {
+          onSelectTab && onSelectTab('quan-ly-sua-chua');
+          onSelectMaintenanceSubTab && onSelectMaintenanceSubTab('dashboard');
+        },
+        isActive: false,
+      });
+
+      // Thư mục/Trang con hiện tại
+      const subTabMap: Record<MaintenanceSubTab, string> = {
+        'dashboard': 'Dashboard',
+        'danh-muc-he-thong': 'Danh mục hệ thống',
+        'ke-hoach': 'Kế hoạch công tác',
+        'dang-ky': 'Đăng ký công tác',
+        'lich-su': 'Lịch sử sửa chữa',
+      };
+      const subLabel = subTabMap[maintenanceSubTab] || 'Dashboard';
+      items.push({
+        id: `mt-${maintenanceSubTab}`,
+        label: subLabel,
+        onClick: () => onSelectMaintenanceSubTab && onSelectMaintenanceSubTab(maintenanceSubTab),
+        isActive: true,
+      });
+    } else if (currentTab === 'quan-ly-tai-lieu') {
+      items.push({
+        id: 'quan-ly-tai-lieu',
+        label: 'Quản lý tài liệu',
+        onClick: () => onSelectTab && onSelectTab('quan-ly-tai-lieu'),
+        isActive: false,
+      });
+      items.push({
+        id: 'tai-lieu-ho-so',
+        label: 'Hồ sơ kỹ thuật & Quy trình',
+        isActive: true,
+      });
+    } else if (currentTab === 'bao-cao') {
+      items.push({
+        id: 'bao-cao',
+        label: 'Báo cáo',
+        onClick: () => onSelectTab && onSelectTab('bao-cao'),
+        isActive: false,
+      });
+      items.push({
+        id: 'bao-cao-thong-ke',
+        label: 'Thống kê & Phân tích',
+        isActive: true,
+      });
+    } else if (currentTab === 'quan-ly-user') {
+      items.push({
+        id: 'he-thong',
+        label: 'Hệ thống',
+        onClick: () => onSelectTab && onSelectTab('quan-ly-user'),
+        isActive: false,
+      });
+      items.push({
+        id: 'quan-ly-user-sub',
+        label: 'Quản lý người dùng',
+        isActive: true,
+      });
+    }
+
+    return items;
+  };
+
+  const breadcrumbs = getBreadcrumbs();
 
   // Check if role is Admin or User
   const isAdmin = 
@@ -121,101 +234,45 @@ export const Header: React.FC<HeaderProps> = ({
     <div className="flex flex-col w-full sticky top-0 z-40">
       {/* 1. TOP MAIN HEADER */}
       <header className="h-16 bg-[#e7eeff]/95 backdrop-blur-md border-b border-[#c1c7d2]/30 flex items-center justify-between px-4 sm:px-6 shadow-2xs">
-        {/* Left Section: Plant Selector & Navigation Menu */}
-        <div className="flex items-center gap-3 sm:gap-6 flex-1 min-w-0">
-          
-          {/* Plant Selector */}
-          <div className="relative flex-shrink-0">
-            <button
-              onClick={() => setShowPlantDropdown(!showPlantDropdown)}
-              className="flex items-center gap-2 text-left group cursor-pointer focus:outline-none p-1.5 rounded-xl hover:bg-white/80 transition-colors"
-              title="Nhấp để đổi nhà máy"
-            >
-              <div className="w-8 h-8 rounded-lg bg-[#005394] text-white flex items-center justify-center shadow-xs">
-                <Building2 size={16} />
-              </div>
-              <div className="flex flex-col hidden sm:flex">
-                <span className="text-[9px] uppercase font-bold text-[#005394] tracking-wider">
-                  ĐẠT PHƯƠNG
-                </span>
-                <div className="flex items-center gap-1">
-                  <h1 className="text-xs sm:text-sm font-bold text-[#111c2c] tracking-tight group-hover:text-[#005394] transition-colors truncate max-w-[130px] lg:max-w-[160px]">
-                    {currentPlant}
-                  </h1>
-                  <ChevronDown size={12} className="text-[#727782] group-hover:text-[#005394] transition-transform flex-shrink-0" />
-                </div>
-              </div>
-            </button>
-
-            {showPlantDropdown && (
-              <div className="absolute left-0 top-full mt-2 w-72 bg-white rounded-xl shadow-xl border border-gray-100 p-2 z-50 animate-in fade-in zoom-in-95">
-                <p className="px-3 py-1 text-[11px] font-bold text-gray-400 uppercase tracking-wider">
-                  Chọn nhà máy / Chi nhánh
-                </p>
-                <button
-                  onClick={() => {
-                    onPlantChange('Nhà máy thủy điện Sơn Trà 1');
-                    setShowPlantDropdown(false);
-                  }}
-                  className={`w-full text-left px-3 py-2.5 rounded-lg text-xs font-semibold flex items-center justify-between transition-colors ${
-                    currentPlant === 'Nhà máy thủy điện Sơn Trà 1' 
-                      ? 'bg-[#eef3fb] text-[#005394]' 
-                      : 'hover:bg-gray-50 text-gray-700'
-                  }`}
-                >
-                  <div className="flex items-center gap-2">
-                    <Building2 size={16} className="text-[#005394]" />
-                    <div>
-                      <p>Nhà máy thủy điện Sơn Trà 1</p>
-                      <p className="text-[10px] font-normal text-gray-500">Quảng Ngãi • Công suất 60MW</p>
-                    </div>
-                  </div>
-                  {currentPlant === 'Nhà máy thủy điện Sơn Trà 1' && <CheckCircle size={14} className="text-[#005394]" />}
-                </button>
-
-                <button
-                  onClick={() => {
-                    onPlantChange('Hòa Bình Plant');
-                    setShowPlantDropdown(false);
-                  }}
-                  className={`w-full text-left px-3 py-2.5 rounded-lg text-xs font-semibold flex items-center justify-between transition-colors mt-1 ${
-                    currentPlant === 'Hòa Bình Plant' 
-                      ? 'bg-[#eef3fb] text-[#005394]' 
-                      : 'hover:bg-gray-50 text-gray-700'
-                  }`}
-                >
-                  <div className="flex items-center gap-2">
-                    <Building2 size={16} className="text-[#3a5f94]" />
-                    <div>
-                      <p>Hòa Bình Plant</p>
-                      <p className="text-[10px] font-normal text-gray-500">Hòa Bình • Chi nhánh vận hành</p>
-                    </div>
-                  </div>
-                  {currentPlant === 'Hòa Bình Plant' && <CheckCircle size={14} className="text-[#005394]" />}
-                </button>
-              </div>
-            )}
-          </div>
-
-          {/* Thanh điều hướng menu */}
-          <nav className="flex items-center gap-1 overflow-x-auto py-1 max-w-full scrollbar-none">
-            {navMenuItems.map((item) => {
+        {/* Left Section: Dynamic Breadcrumb Navigation */}
+        <div className="flex items-center gap-2 sm:gap-4 flex-1 min-w-0 pr-3">
+          <nav 
+            aria-label="Breadcrumb" 
+            className="flex items-center gap-1 sm:gap-1.5 overflow-x-auto py-1 max-w-full scrollbar-none text-xs"
+          >
+            {breadcrumbs.map((item, index) => {
               const Icon = item.icon;
-              const isActive = currentTab === item.id;
+
               return (
-                <button
-                  key={item.id}
-                  onClick={() => onSelectTab && onSelectTab(item.id)}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
-                    isActive
-                      ? 'bg-[#005394] text-white font-bold shadow-xs'
-                      : 'text-[#414750] hover:text-[#005394] hover:bg-white/80'
-                  }`}
-                  title={item.label}
-                >
-                  <Icon size={14} className={isActive ? 'text-white' : 'text-[#005394]'} />
-                  <span className="hidden sm:inline">{item.label}</span>
-                </button>
+                <React.Fragment key={item.id}>
+                  {index > 0 && (
+                    <ChevronRight 
+                      size={14} 
+                      className="text-[#8c939e] flex-shrink-0 mx-0.5 select-none" 
+                      aria-hidden="true"
+                    />
+                  )}
+
+                  {item.isActive ? (
+                    <span
+                      className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-blue-50 text-blue-600 font-semibold border border-blue-100/80 shadow-2xs whitespace-nowrap"
+                      aria-current="page"
+                    >
+                      {Icon && <Icon size={14} className="text-blue-600 flex-shrink-0" />}
+                      <span>{item.label}</span>
+                    </span>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={item.onClick}
+                      className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-[#555e6d] hover:text-[#005394] hover:bg-white/80 transition-colors cursor-pointer font-medium whitespace-nowrap"
+                      title={`Quay lại ${item.label}`}
+                    >
+                      {Icon && <Icon size={14} className="text-[#555e6d] flex-shrink-0" />}
+                      <span>{item.label}</span>
+                    </button>
+                  )}
+                </React.Fragment>
               );
             })}
           </nav>
@@ -230,29 +287,6 @@ export const Header: React.FC<HeaderProps> = ({
             title="Tìm kiếm"
           >
             <Search size={18} />
-          </button>
-
-          {/* View Mode Toggle (Desktop Mode vs Mobile Preview) */}
-          <button
-            onClick={onToggleMobilePreview}
-            className={`hidden md:flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
-              isMobilePreview 
-                ? 'bg-[#005394] text-white shadow-xs' 
-                : 'bg-white/70 hover:bg-white text-[#414750] border border-[#c1c7d2]/50'
-            }`}
-            title="Chuyển chế độ xem Mobile / Desktop"
-          >
-            {isMobilePreview ? (
-              <>
-                <Smartphone size={14} />
-                <span>Khung Mobile</span>
-              </>
-            ) : (
-              <>
-                <Monitor size={14} />
-                <span>Desktop</span>
-              </>
-            )}
           </button>
 
           {/* Database Live Connection Status Button */}

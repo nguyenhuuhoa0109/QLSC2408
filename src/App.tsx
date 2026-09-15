@@ -282,8 +282,14 @@ export default function App() {
             onOpenApprovals={() => setShowApprovalModal(true)}
             onOpenNewTransaction={(type, item) => setTransactionModalConfig({ isOpen: true, type, preselectedItem: item })}
             onSelectActivity={(act) => setSelectedActivityForDetail(act)}
-            onNavigateToWarehouse={() => setCurrentTab('quan-ly-kho')}
-            onNavigateToMaintenance={() => setCurrentTab('quan-ly-sua-chua')}
+            onNavigateToWarehouse={(subTab) => {
+              setCurrentTab('quan-ly-kho');
+              if (subTab) setWarehouseSubTab(subTab);
+            }}
+            onNavigateToMaintenance={(subTab) => {
+              setCurrentTab('quan-ly-sua-chua');
+              if (subTab) setMaintenanceSubTab(subTab);
+            }}
             onNavigateToDocuments={() => setCurrentTab('quan-ly-tai-lieu')}
             isMobileLayout={isMobilePreview}
           />
@@ -369,6 +375,10 @@ export default function App() {
               onToggleMobilePreview={() => setIsMobilePreview(!isMobilePreview)}
               currentTab={currentTab}
               onSelectTab={setCurrentTab}
+              warehouseSubTab={warehouseSubTab}
+              onSelectWarehouseSubTab={setWarehouseSubTab}
+              maintenanceSubTab={maintenanceSubTab}
+              onSelectMaintenanceSubTab={setMaintenanceSubTab}
             />
 
             <main className="flex-1 overflow-y-auto pb-20">
@@ -424,6 +434,10 @@ export default function App() {
               onToggleMobilePreview={() => setIsMobilePreview(!isMobilePreview)}
               currentTab={currentTab}
               onSelectTab={setCurrentTab}
+              warehouseSubTab={warehouseSubTab}
+              onSelectWarehouseSubTab={setWarehouseSubTab}
+              maintenanceSubTab={maintenanceSubTab}
+              onSelectMaintenanceSubTab={setMaintenanceSubTab}
             />
 
             {/* Content Area */}
